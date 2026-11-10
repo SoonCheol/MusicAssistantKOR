@@ -2,14 +2,36 @@ name: Build Music Assistant KOR APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [kor]
+    paths:
+      - 'androidApp/**'
+      - 'composeApp/**'
+      - 'gradle/**'
+      - 'gradle.properties'
+      - 'gradlew'
+      - 'settings.gradle.kts'
+      - 'build.gradle.kts'
+      - '.github/workflows/build-kor-apk.yml'
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: music-assistant-kor-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build-android:
+    if: github.ref == 'refs/heads/kor'
     runs-on: ubuntu-22.04
     timeout-minutes: 45
+    env:
+      RELEASE_KEYSTORE_B64: ${{ secrets.MAK_KEYSTORE_BASE64 }}
+      RELEASE_STORE_PASSWORD: ${{ secrets.MAK_KEYSTORE_PASSWORD }}
+      RELEASE_KEY_ALIAS: ${{ secrets.MAK_KEY_ALIAS }}
+      RELEASE_KEY_PASSWORD: ${{ secrets.MAK_KEY_PASSWORD }}
+      VERSION_NAME: '0.17.0'
     steps:
       - name: Check out KOR branch
         uses: actions/checkout@v4
@@ -23,13 +45,87 @@ jobs:
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build Android debug APK
-        run: ./gradlew :androidApp:assembleDebug --no-daemon
+      - name: Determine version and signing availability
+        id: metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_CODE=$((18 + GITHUB_RUN_NUMBER))
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION_NAME}-kor.${VERSION_CODE}" >> "$GITHUB_OUTPUT"
+          if [[ -n "$RELEASE_KEYSTORE_B64" && -n "$RELEASE_STORE_PASSWORD" && -n "$RELEASE_KEY_ALIAS" && -n "$RELEASE_KEY_PASSWORD" ]]; then
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Release signing secrets are incomplete. Debug artifact only; no GitHub Release."
+          fi
 
-      - name: Upload APK
+      - name: Build debug APK (diagnostics/fallback)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew :androidApp:assembleDebug -PkorBuildNumber=${{ steps.metadata.outputs.version_code }} --no-daemon
+          mkdir -p dist
+          cp androidApp/build/outputs/apk/debug/androidApp-debug.apk \
+            "dist/MusicAssistantKOR-${VERSION_NAME}+${{ steps.metadata.outputs.version_code }}-debug.apk"
+
+      - name: Upload debug artifact (not suitable for in-place updates)
         uses: actions/upload-artifact@v4
         with:
           name: MusicAssistantKOR-debug
-          path: androidApp/build/outputs/apk/debug/*.apk
+          path: dist/*-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Prepare persistent release signing
+        if: steps.metadata.outputs.signed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$RELEASE_KEYSTORE_B64" | base64 --decode > androidApp/github-release.jks
+          {
+            printf 'storeFile=github-release.jks\n'
+            printf 'storePassword=%s\n' "$RELEASE_STORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$RELEASE_KEY_ALIAS"
+            printf 'keyPassword=%s\n' "$RELEASE_KEY_PASSWORD"
+          } > androidApp/keystore.properties
+
+      - name: Build signed release APK
+        if: steps.metadata.outputs.signed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew :androidApp:assembleRelease -PkorBuildNumber=${{ steps.metadata.outputs.version_code }} --no-daemon
+          mapfile -t apks < <(find androidApp/build/outputs/apk/release -maxdepth 1 -name '*.apk' ! -name '*unsigned*' -type f)
+          if [[ ${#apks[@]} -ne 1 ]]; then
+            printf 'Expected one signed release APK; found %s\n' "${#apks[@]}" >&2
+            exit 1
+          fi
+          cp "${apks[0]}" "dist/MusicAssistantKOR-${VERSION_NAME}+${{ steps.metadata.outputs.version_code }}-arm64.apk"
+
+      - name: Upload signed release artifact
+        if: steps.metadata.outputs.signed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: MusicAssistantKOR-release
+          path: dist/*-arm64.apk
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publish GitHub Release
+        if: steps.metadata.outputs.signed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${{ steps.metadata.outputs.tag }}" dist/*-arm64.apk \
+            --target "$GITHUB_SHA" \
+            --title "Music Assistant KOR ${VERSION_NAME} (build ${{ steps.metadata.outputs.version_code }})" \
+            --notes "한국어 현지화 및 개선판. Android arm64 APK. 이전 설치본과 서명이 다르면 최초 재설치가 필요할 수 있습니다."
+      - name: Delete signing material
+        if: always()
+        shell: bash
+        run: |
+          rm -f androidApp/github-release.jks androidApp/keystore.properties
