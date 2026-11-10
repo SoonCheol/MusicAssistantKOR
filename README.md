@@ -21,13 +21,12 @@
 
 ## APK 다운로드 및 설치
 
-개발 브랜치: [kor](https://github.com/SoonCheol/MusicAssistantKOR/tree/kor)
-
-1. [GitHub Actions: Build Music Assistant KOR APK](https://github.com/SoonCheol/MusicAssistantKOR/actions/workflows/build-kor-apk.yml)로 이동합니다.
-2. 성공한 빌드를 열어 Artifacts의 MusicAssistantKOR-debug ZIP을 다운로드합니다 (GitHub 로그인 필요할 수 있음).
-3. ZIP을 압축 해제하고 Android 기기에 APK를 설치합니다.
-
-현재는 **개발용 Debug APK**이며 정식 GitHub Releases APK는 게시하지 않았습니다. 업데이트마다 같은 서명 키가 유지되도록 서명 정책을 별도로 설정해야 합니다.
+- **정식 서명 APK:** [최신 GitHub Releases](https://github.com/SoonCheol/MusicAssistantKOR/releases) — 고정 서명 키 설정과 첫 릴리스 빌드 성공 후 표시됩니다.
+- **개발용 APK:** [GitHub Actions](https://github.com/SoonCheol/MusicAssistantKOR/actions/workflows/build-kor-apk.yml) — 성공한 `kor` 브랜치 빌드의 Artifacts에서 다운로드할 수 있습니다.
+- APK 이름: `MusicAssistantKOR-0.17.0+빌드번호-arm64.apk` (정식 서명), `MusicAssistantKOR-0.17.0+빌드번호-debug.apk` (개발용).
+- `kor` 브랜치의 앱 코드 변경 시 자동 빌드되며, 수동 실행도 가능합니다.
+- **서명 Secrets가 아직 설정되지 않았다면 정식 릴리스는 자동 게시되지 않습니다.** 설정 방법은 [서명 및 배포 가이드](docs/KOR-RELEASE-SIGNING.md)를 참고하세요.
+- 이전에 설치된 디버그 APK와 새 정식 서명 APK는 서명 키가 다를 수 있어 최초 업데이트가 실패할 수 있습니다. 기존 앱 삭제 전 설정을 기록하거나 백업하세요.
 
 ## 확인된 상태
 
