@@ -14,7 +14,7 @@ android {
         applicationId = "io.music_assistant.client.kor"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 18
+        versionCode = providers.gradleProperty("korBuildNumber").orNull?.toIntOrNull() ?: 18
         versionName = "0.17.0"
     }
     packaging {
