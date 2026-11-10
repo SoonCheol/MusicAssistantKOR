@@ -38,7 +38,29 @@ class BrowseViewModel(
     fun load() {
         viewModelScope.launch {
             _state.update { DataState.Loading() }
-            val result = mediaItemRepository.fetchMediaItems(Request.Browse.atPath(path))
+            // KOR convenience: from the Browse entry, skip the provider picker when a
+            // single Filesystem source can be resolved from the live server response.
+            // Never guess a provider ID or hard-code a server browse URI.
+            val rootResult = mediaItemRepository.fetchMediaItems(Request.Browse.atPath(path))
+            val rootItems = rootResult.getOrNull()
+            val filesystemRoots = if (path == null) {
+                rootItems.orEmpty().filterIsInstance<io.music_assistant.client.data.model.client.items.RecommendationFolder>()
+                    .filter { folder ->
+                        !folder.isParentLink &&
+                            folder.displayName.startsWith("Filesystem", ignoreCase = true) &&
+                            !folder.path.isNullOrBlank()
+                    }
+            } else {
+                emptyList()
+            }
+            val result = if (filesystemRoots.size == 1) {
+                val folderPath = requireNotNull(filesystemRoots.single().path)
+                val filesystemResult = mediaItemRepository.fetchMediaItems(Request.Browse.atPath(folderPath))
+                // If the source is unavailable, retain the ordinary provider list.
+                if (filesystemResult.isSuccess) filesystemResult else rootResult
+            } else {
+                rootResult
+            }
             result.getOrNull()
                 ?.let { items -> _state.update { DataState.Data(items) } }
                 ?: run {
