@@ -50,6 +50,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.music_assistant.client.settings.SettingsRepository
+import org.koin.compose.koinInject
 import io.music_assistant.client.data.model.client.LrcLine
 import io.music_assistant.client.data.model.client.Lyrics
 import io.music_assistant.client.ui.compose.common.ToastHost
@@ -128,6 +130,10 @@ fun LyricsPanel(
 ) {
     var offsetMs by remember(lyrics) { mutableStateOf(0) }
     var keepScreenOn by remember { mutableStateOf(false) }
+    val settingsRepository: SettingsRepository = koinInject()
+    var lyricsFontSizeSp by remember(settingsRepository) {
+        mutableStateOf(settingsRepository.getLyricsFontSizeSp())
+    }
     // The offset shifts lines against the live position, so it means nothing without both.
     val canAdjustOffset = lyrics is Lyrics.Synced && livePositionFlow != null
     // The sheet is its own window, so it hosts its own toasts above the page's ToastHost.
@@ -197,15 +203,42 @@ fun LyricsPanel(
                     )
                 }
             }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(
+                    onClick = {
+                        lyricsFontSizeSp = (lyricsFontSizeSp - 1).coerceAtLeast(16)
+                        settingsRepository.setLyricsFontSizeSp(lyricsFontSizeSp)
+                    },
+                    enabled = lyricsFontSizeSp > 16,
+                ) { Text("A−", style = MaterialTheme.typography.titleMedium) }
+                Text(
+                    text = "$lyricsFontSizeSp",
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
+                IconButton(
+                    onClick = {
+                        lyricsFontSizeSp = (lyricsFontSizeSp + 1).coerceAtMost(32)
+                        settingsRepository.setLyricsFontSizeSp(lyricsFontSizeSp)
+                    },
+                    enabled = lyricsFontSizeSp < 32,
+                ) { Text("A+", style = MaterialTheme.typography.titleMedium) }
+            }
             when (lyrics) {
                 is Lyrics.Plain -> PlainLyrics(
                     text = lyrics.text,
+                    fontSizeSp = lyricsFontSizeSp,
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 )
 
                 // Without a position every synced line would render dimmed, so show plain lines.
                 is Lyrics.Synced if livePositionFlow == null -> PlainLyrics(
                     text = lyrics.lines.joinToString("\n") { it.text },
+                    fontSizeSp = lyricsFontSizeSp,
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 )
 
@@ -213,6 +246,7 @@ fun LyricsPanel(
                     lines = lyrics.lines,
                     livePositionFlow = livePositionFlow,
                     offsetMs = offsetMs,
+                    fontSizeSp = lyricsFontSizeSp,
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 )
             }
@@ -288,11 +322,11 @@ private fun LyricsOffsetStepper(
 }
 
 @Composable
-private fun PlainLyrics(text: String, modifier: Modifier = Modifier) {
+private fun PlainLyrics(text: String, fontSizeSp: Int, modifier: Modifier = Modifier) {
     Text(
         text = text,
-        fontSize = 30.sp,
-        lineHeight = 40.sp,
+        fontSize = fontSizeSp.sp,
+        lineHeight = (fontSizeSp * 1.35f).sp,
         color = MaterialTheme.colorScheme.onSurface,
         modifier = modifier.verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 12.dp),
@@ -304,6 +338,7 @@ private fun SyncedLyrics(
     lines: List<LrcLine>,
     livePositionFlow: Flow<Double>?,
     offsetMs: Int = 0,
+    fontSizeSp: Int,
     modifier: Modifier = Modifier,
 ) {
     val synced = livePositionFlow != null
@@ -335,7 +370,7 @@ private fun SyncedLyrics(
         state = listState,
         modifier = modifier,
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 36.dp),
-        verticalArrangement = Arrangement.spacedBy(36.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         itemsIndexed(lines) { index, line ->
             val active = index == currentIndex
@@ -344,14 +379,14 @@ private fun SyncedLyrics(
             Box(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = line.text,
-                    fontSize = 28.sp,
+                    fontSize = fontSizeSp.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Transparent,
                     modifier = Modifier.fillMaxWidth().clearAndSetSemantics {},
                 )
                 Text(
                     text = line.text,
-                    fontSize = 28.sp,
+                    fontSize = fontSizeSp.sp,
                     fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
                     color = if (active) {
                         MaterialTheme.colorScheme.onSurface
