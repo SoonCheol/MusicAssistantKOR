@@ -829,6 +829,14 @@ class SettingsRepository(
         return SortOption(field, desc)
     }
 
+    /** Shared saved size for synced and plain lyrics. */
+    fun getLyricsFontSizeSp(): Int =
+        settings.getInt("kor_lyrics_font_size_sp", 21).coerceIn(16, 32)
+
+    fun setLyricsFontSizeSp(size: Int) {
+        settings.putInt("kor_lyrics_font_size_sp", size.coerceIn(16, 32))
+    }
+
     companion object {
         /** The range of the local player's static delay, in ms. Positive plays earlier. */
         val SENDSPIN_STATIC_DELAY_RANGE = -2000..2000
