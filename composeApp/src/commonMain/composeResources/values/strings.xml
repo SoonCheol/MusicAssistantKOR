@@ -573,4 +573,21 @@
   <string name="unsupported_install_description">This server is not installed through one of the supported installation methods. Some features may not work as expected, and issues reported from it may be closed without support.</string>
   <string name="unsupported_install_link">Installation methods</string>
   <string name="unsupported_install_title">Unsupported installation</string>
+  <string name="kor_rec_artist_events">Artist Events</string>
+  <string name="kor_rec_in_progress">In progress</string>
+  <string name="kor_rec_recently_played">Recently played</string>
+  <string name="kor_rec_recently_added_tracks">Recently added tracks</string>
+  <string name="kor_rec_recently_added_albums">Recently added albums</string>
+  <string name="kor_rec_random_artists">Random artists</string>
+  <string name="kor_rec_random_albums">Random albums</string>
+  <string name="kor_rec_recent_favorite_tracks">Recently favorited tracks</string>
+  <string name="kor_rec_favorite_playlists">Favorite playlists</string>
+  <string name="kor_rec_favorite_radio">Favorite Radio stations</string>
+  <string name="kor_rec_recent_artists">Recent artists</string>
+  <string name="kor_rec_recent_tracks">Recent tracks</string>
+  <string name="kor_rec_forgotten_tracks">Forgotten Tracks</string>
+  <string name="kor_rec_forgotten_albums">Forgotten Albums</string>
+  <string name="kor_rec_forgotten_artists">Forgotten Artists</string>
+  <string name="kor_rec_most_played_tracks">Most Played Tracks</string>
+  <string name="kor_rec_never_played_tracks">Never / Rarely Played</string>
 </resources>
