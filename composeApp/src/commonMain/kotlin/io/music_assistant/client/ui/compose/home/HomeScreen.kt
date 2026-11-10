@@ -69,6 +69,23 @@ import musicassistantclient.composeapp.generated.resources.Res
 import musicassistantclient.composeapp.generated.resources.discover_edit_rows
 import musicassistantclient.composeapp.generated.resources.discover_save_rows
 import musicassistantclient.composeapp.generated.resources.discover_shortcuts
+import musicassistantclient.composeapp.generated.resources.kor_rec_artist_events
+import musicassistantclient.composeapp.generated.resources.kor_rec_in_progress
+import musicassistantclient.composeapp.generated.resources.kor_rec_recently_played
+import musicassistantclient.composeapp.generated.resources.kor_rec_recently_added_tracks
+import musicassistantclient.composeapp.generated.resources.kor_rec_recently_added_albums
+import musicassistantclient.composeapp.generated.resources.kor_rec_random_artists
+import musicassistantclient.composeapp.generated.resources.kor_rec_random_albums
+import musicassistantclient.composeapp.generated.resources.kor_rec_recent_favorite_tracks
+import musicassistantclient.composeapp.generated.resources.kor_rec_favorite_playlists
+import musicassistantclient.composeapp.generated.resources.kor_rec_favorite_radio
+import musicassistantclient.composeapp.generated.resources.kor_rec_recent_artists
+import musicassistantclient.composeapp.generated.resources.kor_rec_recent_tracks
+import musicassistantclient.composeapp.generated.resources.kor_rec_forgotten_tracks
+import musicassistantclient.composeapp.generated.resources.kor_rec_forgotten_albums
+import musicassistantclient.composeapp.generated.resources.kor_rec_forgotten_artists
+import musicassistantclient.composeapp.generated.resources.kor_rec_most_played_tracks
+import musicassistantclient.composeapp.generated.resources.kor_rec_never_played_tracks
 import musicassistantclient.composeapp.generated.resources.library_error
 import musicassistantclient.composeapp.generated.resources.nav_discover
 import musicassistantclient.composeapp.generated.resources.refresh
@@ -262,6 +279,38 @@ internal data class HomeRow(
 
 // Internal so HomeScreenCategoriesTest can pin the row visibility rules: loading
 // rows stay, resolved-empty rows are hidden.
+/**
+ * Translate only known MA recommendation row IDs. Server data, user playlists
+ * and browsing folder names remain untouched.
+ */
+private fun recommendationRowTitle(
+    folder: io.music_assistant.client.data.model.client.items.RecommendationFolder,
+) = when (folder.provider to folder.itemId) {
+        "recommendations" to "in_progress" -> Res.string.kor_rec_in_progress.toDisplayString()
+        "recommendations" to "recently_played" -> Res.string.kor_rec_recently_played.toDisplayString()
+        "recommendations" to "recently_added_tracks" -> Res.string.kor_rec_recently_added_tracks.toDisplayString()
+        "recommendations" to "recently_added_albums" -> Res.string.kor_rec_recently_added_albums.toDisplayString()
+        "recommendations" to "random_artists" -> Res.string.kor_rec_random_artists.toDisplayString()
+        "recommendations" to "random_albums" -> Res.string.kor_rec_random_albums.toDisplayString()
+        "recommendations" to "recent_favorite_tracks" -> Res.string.kor_rec_recent_favorite_tracks.toDisplayString()
+        "recommendations" to "favorite_playlists" -> Res.string.kor_rec_favorite_playlists.toDisplayString()
+        "recommendations" to "favorite_radio" -> Res.string.kor_rec_favorite_radio.toDisplayString()
+        "recommendations" to "recent_artists" -> Res.string.kor_rec_recent_artists.toDisplayString()
+        "recommendations" to "recent_tracks" -> Res.string.kor_rec_recent_tracks.toDisplayString()
+        "recommendations" to "forgotten_tracks" -> Res.string.kor_rec_forgotten_tracks.toDisplayString()
+        "recommendations" to "forgotten_albums" -> Res.string.kor_rec_forgotten_albums.toDisplayString()
+        "recommendations" to "forgotten_artists" -> Res.string.kor_rec_forgotten_artists.toDisplayString()
+        "recommendations" to "most_played_tracks" -> Res.string.kor_rec_most_played_tracks.toDisplayString()
+        "recommendations" to "never_played_tracks" -> Res.string.kor_rec_never_played_tracks.toDisplayString()
+    // Artist Events originates from an optional recommendation provider.
+    // Unlike the built-in rows its stable provider/item ID is not verified.
+    else -> if (folder.displayName == "Artist Events") {
+        Res.string.kor_rec_artist_events.toDisplayString()
+    } else {
+        folder.displayName.toDisplayString()
+    }
+}
+
 internal fun getCategories(
     recommendationsState: DataState<List<RecommendationRowState>>,
     shortcutsState: DataState<List<Shortcut>>,
@@ -280,7 +329,7 @@ internal fun getCategories(
                 HomeRow(
                     category = ItemCategory(
                         id = row.folder.itemId,
-                        title = row.folder.displayName.toDisplayString(),
+                        title = recommendationRowTitle(row.folder),
                         items = row.resolvedItems.orEmpty(),
                         lazyListKey = row.folder.lazyListKey(),
                         tag = HomeScreenSemantics.rowTag(row.folder.itemId),
