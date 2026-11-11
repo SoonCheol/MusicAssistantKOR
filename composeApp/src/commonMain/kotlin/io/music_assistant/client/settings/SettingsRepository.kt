@@ -296,7 +296,9 @@ class SettingsRepository(
     val homeRowLabels = _homeRowLabels.asStateFlow()
 
     fun updateHomeRowLabels(labels: Map<String, String>) {
-        val updated = _homeRowLabels.value + labels
+        // Keep the visible options aligned with the current server recommendation set.
+        // The user's saved size preferences remain separate and are never erased.
+        val updated = labels
         if (updated == _homeRowLabels.value) return
         settings.putString("home_row_labels", myJson.encodeToString(updated))
         _homeRowLabels.update { updated }
