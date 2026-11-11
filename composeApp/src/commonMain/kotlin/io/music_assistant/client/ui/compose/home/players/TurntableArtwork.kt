@@ -1,6 +1,5 @@
 package io.music_assistant.client.ui.compose.home.players
 
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -49,20 +48,8 @@ internal fun TurntableArtwork(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
 ) {
-    // One revolution in 1800 ms approximates 33 1/3 RPM.
-    // Frame-driven state avoids the previously non-moving repeat-Animatable path.
-    // Both vinyl and album artwork observe the same rotation value.
+    // 12 RPM (one revolution every 5 seconds), shared by vinyl and album image.
     var rotationDegrees by remember { mutableFloatStateOf(0f) }
-    val trackSlide = remember { Animatable(0f) }
-    var lastTitle by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
-    var swipeDirection by remember { mutableFloatStateOf(1f) }
-    LaunchedEffect(title) {
-        if (lastTitle != null && title != lastTitle) {
-            trackSlide.snapTo(65f * swipeDirection)
-            trackSlide.animateTo(0f, tween(durationMillis = 330))
-        }
-        lastTitle = title
-    }
     LaunchedEffect(playing) {
         if (playing) {
             var previousFrameNanos = 0L
@@ -71,8 +58,8 @@ internal fun TurntableArtwork(
                     if (previousFrameNanos != 0L) {
                         val elapsedSeconds = ((frameNanos - previousFrameNanos) / 1_000_000_000f)
                             .coerceIn(0f, 0.05f)
-                        // 33 1/3 revolutions per minute = 200 degrees per second.
-                        rotationDegrees = (rotationDegrees + elapsedSeconds * 200f) % 360f
+                        // 12 RPM = 72 degrees per second.
+                        rotationDegrees = (rotationDegrees + elapsedSeconds * 72f) % 360f
                     }
                     previousFrameNanos = frameNanos
                 }
@@ -85,7 +72,6 @@ internal fun TurntableArtwork(
         label = "tonearm",
     )
     val thresholdPx = with(LocalDensity.current) { 85.dp.toPx() }
-    val density = LocalDensity.current.density
     var swipeDistance by remember { mutableFloatStateOf(0f) }
 
     Box(
@@ -100,11 +86,9 @@ internal fun TurntableArtwork(
                     },
                     onDragEnd = {
                         if (swipeDistance > thresholdPx) {
-                            swipeDirection = -1f
                             onPrevious()
                         }
                         if (swipeDistance < -thresholdPx) {
-                            swipeDirection = 1f
                             onNext()
                         }
                         swipeDistance = 0f
@@ -119,7 +103,6 @@ internal fun TurntableArtwork(
                 .fillMaxSize(0.92f)
                 .graphicsLayer {
                     rotationZ = rotationDegrees
-                    translationX = trackSlide.value * density
                 },
             contentAlignment = Alignment.Center,
         ) {
