@@ -181,6 +181,7 @@ fun <T> CategoryRow(
         progressActions = progressActions,
         providerIconFetcher = providerIconFetcher,
         rowTag = itemCategory.tag,
+        compact = compact,
     )
 }
 
