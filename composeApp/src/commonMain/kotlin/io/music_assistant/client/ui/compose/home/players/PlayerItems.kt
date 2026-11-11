@@ -1,5 +1,7 @@
 package io.music_assistant.client.ui.compose.home.players
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -45,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -347,11 +350,27 @@ fun FullPlayerItem(
     val turntableEnabled by koinInject<SettingsRepository>().turntableEnabled.collectAsStateWithLifecycle()
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
     val controlTint = colors.controlTint
+    val density = LocalDensity.current
+    // The artwork and metadata enter as one horizontal page when the media changes.
+    // Keep seek, transport, volume and other output-device controls stationary.
+    val trackEnter = remember { Animatable(0f) }
+    var previousMediaKey by remember { mutableStateOf<String?>(null) }
+    var enterDirection by remember { mutableStateOf(1f) }
+    val mediaKey = currentMedia?.let { "${it.title}|${it.subtitle}|${it.imageUrl}" }
+    LaunchedEffect(mediaKey) {
+        if (mediaKey != null && previousMediaKey != null && mediaKey != previousMediaKey) {
+            trackEnter.snapTo(240f * enterDirection)
+            trackEnter.animateTo(0f, tween(durationMillis = 320))
+        }
+        previousMediaKey = mediaKey
+    }
+    val trackEntryModifier = Modifier.graphicsLayer {
+        translationX = trackEnter.value * density.density
+    }
 
     // Across a horizontal fold the artwork ends above the crease, which leaves the controls, pushed
     // down by SpaceBetween, on the lower half. Without a fold the position is not measured, so a drag
     // or an animation that moves the player does not recompose it.
-    val density = LocalDensity.current
     val horizontalFold = LocalDeviceChrome.current.horizontalFoldRegion
     var topInWindow by remember { mutableStateOf(0.dp) }
     val artworkMaxHeight = horizontalFold?.let { (it.start - topInWindow).coerceAtLeast(0.dp) }
@@ -367,7 +386,8 @@ fun FullPlayerItem(
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         Box(
-            modifier = Modifier.padding(horizontal = FULL_PLAYER_HORIZONTAL_PADDING)
+            modifier = trackEntryModifier
+                .padding(horizontal = FULL_PLAYER_HORIZONTAL_PADDING)
                 .testTag(FullPlayerSemantics.ARTWORK_TAG)
                 .weight(1f, fill = false)
                 .then(artworkMaxHeight?.let { Modifier.heightIn(max = it) } ?: Modifier)
@@ -390,8 +410,14 @@ fun FullPlayerItem(
                     playing = item.player.isPlaying,
                     color = colors.dominant,
                     iconColor = onPrimaryContainer,
-                    onPrevious = { playerAction(item, PlayerAction.Previous) },
-                    onNext = { playerAction(item, PlayerAction.Next) },
+                    onPrevious = {
+                        enterDirection = -1f
+                        playerAction(item, PlayerAction.Previous)
+                    },
+                    onNext = {
+                        enterDirection = 1f
+                        playerAction(item, PlayerAction.Next)
+                    },
                 )
             } else {
                 currentMedia?.imageUrl?.let {
@@ -465,7 +491,7 @@ fun FullPlayerItem(
         val goToArtistLabel = stringResource(Res.string.action_go_to_artist)
 
         Column(
-            modifier = Modifier
+            modifier = trackEntryModifier
                 .fillMaxWidth()
                 .clearAndSetSemantics {
                     contentDescription = trackContentDescription
