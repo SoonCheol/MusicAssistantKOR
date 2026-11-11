@@ -86,7 +86,7 @@ fun <T, U> CategoryRow(
     progressActions: ProgressActions? = null,
     providerIconFetcher: ProviderIconFetcher,
     viewAllColor: Color = MaterialTheme.colorScheme.primary,
-    compact: Boolean = false,
+    compact: Boolean? = null,
 ) {
     if (data is DataState.Data) {
         CategoryRow(
@@ -142,7 +142,7 @@ fun <T> CategoryRow(
     progressActions: ProgressActions? = null,
     providerIconFetcher: ProviderIconFetcher,
     viewAllColor: Color = MaterialTheme.colorScheme.primary,
-    compact: Boolean = false,
+    compact: Boolean? = null,
 ) {
     if (itemCategory.items.isEmpty() && itemCategory.filter == null) {
         return
@@ -198,7 +198,7 @@ fun CategoryRow(
     progressActions: ProgressActions? = null,
     providerIconFetcher: ProviderIconFetcher,
     rowTag: String? = null,
-    compact: Boolean = false,
+    compact: Boolean? = null,
 ) {
     val modifier = if (rowTag != null) {
         Modifier.testTag(rowTag)
@@ -212,8 +212,11 @@ fun CategoryRow(
 
     // A row of tap-to-play items shows list items, two in each column.
     val stackedPairs = remember(mediaItems, compact) {
-        if (compact) mediaItems.chunked(2)
-        else mediaItems.takeIf { items -> items.isNotEmpty() && items.all { it.playsOnTap } }?.chunked(2)
+        when (compact) {
+            true -> mediaItems.chunked(2)
+            false -> null
+            null -> mediaItems.takeIf { items -> items.isNotEmpty() && items.all { it.playsOnTap } }?.chunked(2)
+        }
     }
 
     // Stacked list items keep one title line, so both items of a column have the same height.

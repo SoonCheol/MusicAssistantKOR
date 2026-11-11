@@ -115,6 +115,13 @@ fun HomeScreen(
             homeScreenViewModel.updateHomeRowLabels(
                 recommendationsState.data.associate { it.folder.itemId to it.folder.displayName },
             )
+            homeScreenViewModel.updateHomeRowDefaultStyles(
+                recommendationsState.data.mapNotNull { row ->
+                    row.resolvedItems?.takeIf { it.isNotEmpty() }?.let { items ->
+                        row.folder.itemId to items.all { it.playsOnTap }
+                    }
+                }.toMap(),
+            )
         }
     }
     val shortcutsState = homeScreenState.shortcuts
@@ -185,7 +192,7 @@ fun HomeScreen(
                     libraryActions = actionsViewModel,
                     progressActions = actionsViewModel,
                     providerIconFetcher = providerIconFetcher,
-                    compact = homeRowStyles[row.category.id] == true,
+                    compact = homeRowStyles[row.category.id],
                 )
             }
 

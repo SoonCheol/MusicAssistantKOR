@@ -99,6 +99,9 @@ class HomeScreenViewModel(
 ) : ViewModel() {
     val homeRowStyles = settings.homeRowStyles
 
+    fun updateHomeRowDefaultStyles(defaults: Map<String, Boolean>) =
+        settings.updateHomeRowDefaultStyles(defaults)
+
     fun updateHomeRowLabels(labels: Map<String, String>) =
         settings.updateHomeRowLabels(labels)
 

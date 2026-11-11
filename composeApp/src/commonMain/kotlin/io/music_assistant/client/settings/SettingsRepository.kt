@@ -251,6 +251,25 @@ class SettingsRepository(
     )
     val homeRowStyles = _homeRowStyles.asStateFlow()
 
+    // The legacy row renderer displays a two-item stacked list whenever every
+    // item plays on tap. Cache that inferred default separately from overrides
+    // so the Settings selection always matches the existing rendered layout.
+    private val _homeRowDefaultStyles = MutableStateFlow(
+        runCatching {
+            myJson.decodeFromString<Map<String, Boolean>>(
+                settings.getString("home_row_default_compact_styles", "{}"),
+            )
+        }.getOrDefault(emptyMap()),
+    )
+    val homeRowDefaultStyles = _homeRowDefaultStyles.asStateFlow()
+
+    fun updateHomeRowDefaultStyles(defaults: Map<String, Boolean>) {
+        val updated = _homeRowDefaultStyles.value + defaults
+        if (updated == _homeRowDefaultStyles.value) return
+        settings.putString("home_row_default_compact_styles", myJson.encodeToString(updated))
+        _homeRowDefaultStyles.update { updated }
+    }
+
     fun setHomeRowCompact(id: String, compact: Boolean) {
         val updated = _homeRowStyles.value + (id to compact)
         settings.putString("home_row_compact_styles", myJson.encodeToString(updated))

@@ -169,6 +169,7 @@ class SettingsViewModel(
     }
 
     val homeRowStyles = settings.homeRowStyles
+    val homeRowDefaultStyles = settings.homeRowDefaultStyles
     val homeRowLabels = settings.homeRowLabels
 
     fun setHomeRowCompact(id: String, compact: Boolean) =
