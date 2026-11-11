@@ -42,6 +42,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -404,6 +405,28 @@ fun SettingsScreen(goHome: () -> Unit, exitApp: () -> Unit) {
                 )
 
                 RecommendationDisplaySection(viewModel)
+                val turntableEnabled by viewModel.turntableEnabled.collectAsStateWithLifecycle()
+                SectionCard {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("턴테이블 재생 화면", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "LP 회전 및 톤암 애니메이션 (끄면 기존 앨범 화면)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = turntableEnabled,
+                            onCheckedChange = viewModel::setTurntableEnabled,
+                        )
+                    }
+                }
+
 
                 // Misc settings - always visible
                 val shareLogsTitle = stringResource(Res.string.settings_share_logs)
