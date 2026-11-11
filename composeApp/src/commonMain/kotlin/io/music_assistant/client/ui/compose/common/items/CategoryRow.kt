@@ -86,6 +86,7 @@ fun <T, U> CategoryRow(
     progressActions: ProgressActions? = null,
     providerIconFetcher: ProviderIconFetcher,
     viewAllColor: Color = MaterialTheme.colorScheme.primary,
+    compact: Boolean = false,
 ) {
     if (data is DataState.Data) {
         CategoryRow(
@@ -100,6 +101,7 @@ fun <T, U> CategoryRow(
             progressActions = progressActions,
             providerIconFetcher = providerIconFetcher,
             viewAllColor = viewAllColor,
+            compact = compact,
         )
     } else if (data is DataState.Loading) {
         val placeholderColor by rememberInfiniteTransition().animateColor(
@@ -140,6 +142,7 @@ fun <T> CategoryRow(
     progressActions: ProgressActions? = null,
     providerIconFetcher: ProviderIconFetcher,
     viewAllColor: Color = MaterialTheme.colorScheme.primary,
+    compact: Boolean = false,
 ) {
     if (itemCategory.items.isEmpty() && itemCategory.filter == null) {
         return
@@ -178,6 +181,7 @@ fun <T> CategoryRow(
         progressActions = progressActions,
         providerIconFetcher = providerIconFetcher,
         rowTag = itemCategory.tag,
+        compact = compact,
     )
 }
 
@@ -194,6 +198,7 @@ fun CategoryRow(
     progressActions: ProgressActions? = null,
     providerIconFetcher: ProviderIconFetcher,
     rowTag: String? = null,
+    compact: Boolean = false,
 ) {
     val modifier = if (rowTag != null) {
         Modifier.testTag(rowTag)
@@ -206,8 +211,9 @@ fun CategoryRow(
     val itemKeys = remember(mediaItems) { mediaItems.lazyListOccurrenceKeys() }
 
     // A row of tap-to-play items shows list items, two in each column.
-    val stackedPairs = remember(mediaItems) {
-        mediaItems.takeIf { items -> items.isNotEmpty() && items.all { it.playsOnTap } }?.chunked(2)
+    val stackedPairs = remember(mediaItems, compact) {
+        if (compact) mediaItems.chunked(2)
+        else mediaItems.takeIf { items -> items.isNotEmpty() && items.all { it.playsOnTap } }?.chunked(2)
     }
 
     // Stacked list items keep one title line, so both items of a column have the same height.
@@ -215,6 +221,7 @@ fun CategoryRow(
         when (item) {
             is Artist -> ArtistWithMenu(
                 item = item,
+                viewMode = viewMode,
                 onNavigateClick = onNavigateClick,
                 onPlayOption = onPlayClick,
                 libraryActions = libraryActions,
@@ -223,6 +230,7 @@ fun CategoryRow(
 
             is Album -> AlbumWithMenu(
                 item = item,
+                viewMode = viewMode,
                 onNavigateClick = onNavigateClick,
                 navigateToItem = onNavigateClick,
                 containerItem = containerItem,
@@ -236,6 +244,7 @@ fun CategoryRow(
 
             is Playlist -> PlaylistWithMenu(
                 item = item,
+                viewMode = viewMode,
                 onNavigateClick = onNavigateClick,
                 onPlayOption = onPlayClick,
                 libraryActions = libraryActions,
@@ -244,6 +253,7 @@ fun CategoryRow(
 
             is Podcast -> PodcastWithMenu(
                 item = item,
+                viewMode = viewMode,
                 onNavigateClick = onNavigateClick,
                 onPlayOption = onPlayClick,
                 libraryActions = libraryActions,
@@ -277,6 +287,7 @@ fun CategoryRow(
 
             is Audiobook -> AudiobookWithMenu(
                 item = item,
+                viewMode = viewMode,
                 onNavigateClick = onNavigateClick,
                 onPlayOption = onPlayClick,
                 playlistActions = playlistActions,
@@ -288,6 +299,7 @@ fun CategoryRow(
             // Audiobookshelf "Continue series" / "Recent series" rows.
             is MediaCollection -> MediaCollectionWithMenu(
                 item = item,
+                viewMode = viewMode,
                 onNavigateClick = onNavigateClick,
                 onPlayOption = onPlayClick,
                 libraryActions = libraryActions,
@@ -305,6 +317,7 @@ fun CategoryRow(
 
             is Genre -> GenreWithMenu(
                 item = item,
+                viewMode = viewMode,
                 onNavigateClick = onNavigateClick,
                 onPlayOption = onPlayClick,
                 libraryActions = libraryActions,

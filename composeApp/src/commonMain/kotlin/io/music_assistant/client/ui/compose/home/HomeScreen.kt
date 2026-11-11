@@ -29,6 +29,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -108,6 +109,14 @@ fun HomeScreen(
 
     // Reconciled, enabled-first ordering. Authoritative for normal-mode display.
     val recommendationsState = homeScreenState.recommendations
+    val homeRowStyles by homeScreenViewModel.homeRowStyles.collectAsStateWithLifecycle()
+    LaunchedEffect(recommendationsState) {
+        if (recommendationsState is DataState.Data) {
+            homeScreenViewModel.updateHomeRowLabels(
+                recommendationsState.data.associate { it.folder.itemId to it.folder.displayName },
+            )
+        }
+    }
     val shortcutsState = homeScreenState.shortcuts
     val homeRowsConfig = homeScreenState.homeRowsConfig
     val working = remember(recommendationsState, shortcutsState, homeRowsConfig) {
@@ -176,6 +185,7 @@ fun HomeScreen(
                     libraryActions = actionsViewModel,
                     progressActions = actionsViewModel,
                     providerIconFetcher = providerIconFetcher,
+                    compact = homeRowStyles[row.category.id] == true,
                 )
             }
 
@@ -209,7 +219,7 @@ fun HomeScreen(
                                             .matchParentSize()
                                             .background(
                                                 MaterialTheme.colorScheme.background.copy(
-                                                    alpha = if (enabled) 0.60f else 0.80f,
+                                                    alpha = if (enabled) 0.38f else 0.64f,
                                                 ),
                                             )
                                             .pointerInput(Unit) {
