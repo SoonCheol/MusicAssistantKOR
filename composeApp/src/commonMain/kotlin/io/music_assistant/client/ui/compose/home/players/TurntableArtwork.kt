@@ -3,10 +3,10 @@ package io.music_assistant.client.ui.compose.home.players
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
@@ -142,12 +142,11 @@ internal fun TurntableArtwork(
                         modifier = Modifier.fillMaxSize(),
                     )
                 } else {
-                    Canvas(Modifier.fillMaxSize()) { drawCircle(color) }
-                    Icon(
-                        icon,
+                    Image(
+                        painter = placeholder,
                         contentDescription = title,
-                        tint = iconColor,
-                        modifier = Modifier.fillMaxSize(0.48f),
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
                     )
                 }
                 Canvas(Modifier.fillMaxSize()) {
