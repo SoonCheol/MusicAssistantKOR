@@ -5,11 +5,14 @@ package io.music_assistant.client.ui.compose.common.painters
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -25,22 +28,53 @@ private class PlaceholderPainter(
         val canvasWidth = size.width
         val canvasHeight = size.height
 
-        // Draw background
+        // Unified KOR placeholder for missing album/artist/track/podcast art.
+        // The existing caller supplies the type-specific vector (record,
+        // person, note, microphone); real artwork is never replaced.
+        val center = Offset(canvasWidth / 2f, canvasHeight / 2f)
+        val base = minOf(canvasWidth, canvasHeight)
         drawRect(
-            color = backgroundColor,
+            brush = Brush.linearGradient(
+                colors = listOf(Color(0xFF153247), Color(0xFF28566A), Color(0xFF10283C)),
+                start = Offset.Zero,
+                end = Offset(canvasWidth, canvasHeight),
+            ),
             size = Size(canvasWidth, canvasHeight),
         )
+        // Keep a trace of the track/player-derived color without changing
+        // the recognizable navy KOR visual identity.
+        drawCircle(
+            color = backgroundColor.copy(alpha = 0.12f),
+            radius = base * 0.55f,
+            center = center,
+        )
+        drawCircle(
+            color = Color(0xFFE1EEF1),
+            radius = base * 0.36f,
+            center = center,
+            alpha = 0.12f,
+        )
+        drawCircle(
+            color = Color(0xFFA9CFD6),
+            radius = base * 0.36f,
+            center = center,
+            alpha = 0.53f,
+            style = Stroke(width = base * 0.012f),
+        )
+        drawCircle(
+            color = Color(0xFFB9D9DF),
+            radius = base * 0.28f,
+            center = center,
+            alpha = 0.21f,
+            style = Stroke(width = base * 0.0035f),
+        )
 
-        // Draw icon centered
-        val iconSize = minOf(canvasWidth, canvasHeight) * 0.5f
-        val offsetX = (canvasWidth - iconSize) / 2
-        val offsetY = (canvasHeight - iconSize) / 2
-
-        translate(left = offsetX, top = offsetY) {
+        val iconSize = base * 0.40f
+        translate(left = center.x - iconSize / 2f, top = center.y - iconSize / 2f) {
             with(iconPainter) {
                 draw(
                     size = Size(iconSize, iconSize),
-                    colorFilter = ColorFilter.tint(iconColor),
+                    colorFilter = ColorFilter.tint(Color(0xFFE8F5F6)),
                 )
             }
         }
