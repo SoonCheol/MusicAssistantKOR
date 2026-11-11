@@ -94,6 +94,23 @@ import io.music_assistant.client.utils.isValidBasePath
 import io.music_assistant.client.utils.isValidHost
 import io.music_assistant.client.webrtc.model.RemoteId
 import musicassistantclient.composeapp.generated.resources.Res
+import musicassistantclient.composeapp.generated.resources.kor_rec_in_progress
+import musicassistantclient.composeapp.generated.resources.kor_rec_recently_played
+import musicassistantclient.composeapp.generated.resources.kor_rec_recently_added_tracks
+import musicassistantclient.composeapp.generated.resources.kor_rec_recently_added_albums
+import musicassistantclient.composeapp.generated.resources.kor_rec_random_artists
+import musicassistantclient.composeapp.generated.resources.kor_rec_random_albums
+import musicassistantclient.composeapp.generated.resources.kor_rec_recent_favorite_tracks
+import musicassistantclient.composeapp.generated.resources.kor_rec_favorite_playlists
+import musicassistantclient.composeapp.generated.resources.kor_rec_favorite_radio
+import musicassistantclient.composeapp.generated.resources.kor_rec_recent_artists
+import musicassistantclient.composeapp.generated.resources.kor_rec_recent_tracks
+import musicassistantclient.composeapp.generated.resources.kor_rec_forgotten_tracks
+import musicassistantclient.composeapp.generated.resources.kor_rec_forgotten_albums
+import musicassistantclient.composeapp.generated.resources.kor_rec_forgotten_artists
+import musicassistantclient.composeapp.generated.resources.kor_rec_most_played_tracks
+import musicassistantclient.composeapp.generated.resources.kor_rec_never_played_tracks
+import musicassistantclient.composeapp.generated.resources.kor_rec_artist_events
 import musicassistantclient.composeapp.generated.resources.auth_title
 import musicassistantclient.composeapp.generated.resources.cd_connection_history
 import musicassistantclient.composeapp.generated.resources.cd_delete_crash_logs
@@ -481,7 +498,29 @@ private fun RecommendationDisplaySection(viewModel: SettingsViewModel) {
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(title, modifier = Modifier.weight(1f), maxLines = 2)
+                    // Keep the same known MA recommendation labels as the Discover page.
+                    val localizedTitle = when (id) {
+                        "in_progress" -> stringResource(Res.string.kor_rec_in_progress)
+                        "recently_played" -> stringResource(Res.string.kor_rec_recently_played)
+                        "recently_added_tracks" -> stringResource(Res.string.kor_rec_recently_added_tracks)
+                        "recently_added_albums" -> stringResource(Res.string.kor_rec_recently_added_albums)
+                        "random_artists" -> stringResource(Res.string.kor_rec_random_artists)
+                        "random_albums" -> stringResource(Res.string.kor_rec_random_albums)
+                        "recent_favorite_tracks" -> stringResource(Res.string.kor_rec_recent_favorite_tracks)
+                        "favorite_playlists" -> stringResource(Res.string.kor_rec_favorite_playlists)
+                        "favorite_radio" -> stringResource(Res.string.kor_rec_favorite_radio)
+                        "recent_artists" -> stringResource(Res.string.kor_rec_recent_artists)
+                        "recent_tracks" -> stringResource(Res.string.kor_rec_recent_tracks)
+                        "forgotten_tracks" -> stringResource(Res.string.kor_rec_forgotten_tracks)
+                        "forgotten_albums" -> stringResource(Res.string.kor_rec_forgotten_albums)
+                        "forgotten_artists" -> stringResource(Res.string.kor_rec_forgotten_artists)
+                        "most_played_tracks" -> stringResource(Res.string.kor_rec_most_played_tracks)
+                        "never_played_tracks" -> stringResource(Res.string.kor_rec_never_played_tracks)
+                        else -> if (title == "Artist Events") {
+                            stringResource(Res.string.kor_rec_artist_events)
+                        } else title
+                    }
+                    Text(localizedTitle, modifier = Modifier.weight(1f), maxLines = 2)
                     val compact = styles[id] ?: defaults[id] ?: false
                     TextButton(onClick = { viewModel.setHomeRowCompact(id, false) }) {
                         Text("크게", color = if (!compact) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
