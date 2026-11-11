@@ -648,6 +648,15 @@ private fun AppVersionSection(appVersion: AppVersion) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
         )
+        Spacer(modifier = Modifier.size(8.dp))
+        Text(
+            text = "Music Assistant KOR 최신 버전 다운로드",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.clickable {
+                uriHandler.openUri("https://github.com/SoonCheol/MusicAssistantKOR/releases/latest")
+            },
+        )
         Spacer(modifier = Modifier.size(4.dp))
         Text(
             text = stringResource(Res.string.settings_app_documentation),
