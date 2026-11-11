@@ -241,6 +241,39 @@ class SettingsRepository(
         _homeRowsConfig.update { config }
     }
 
+    // Per-recommendation display style. Independent of existing visibility/order settings.
+    private val _homeRowStyles = MutableStateFlow(
+        runCatching {
+            myJson.decodeFromString<Map<String, Boolean>>(
+                settings.getString("home_row_compact_styles", "{}"),
+            )
+        }.getOrDefault(emptyMap()),
+    )
+    val homeRowStyles = _homeRowStyles.asStateFlow()
+
+    fun setHomeRowCompact(id: String, compact: Boolean) {
+        val updated = _homeRowStyles.value + (id to compact)
+        settings.putString("home_row_compact_styles", myJson.encodeToString(updated))
+        _homeRowStyles.update { updated }
+    }
+
+    // Titles come from the MA recommendation response and are cached for Settings.
+    private val _homeRowLabels = MutableStateFlow(
+        runCatching {
+            myJson.decodeFromString<Map<String, String>>(
+                settings.getString("home_row_labels", "{}"),
+            )
+        }.getOrDefault(emptyMap()),
+    )
+    val homeRowLabels = _homeRowLabels.asStateFlow()
+
+    fun updateHomeRowLabels(labels: Map<String, String>) {
+        val updated = _homeRowLabels.value + labels
+        if (updated == _homeRowLabels.value) return
+        settings.putString("home_row_labels", myJson.encodeToString(updated))
+        _homeRowLabels.update { updated }
+    }
+
     // Library tabs visibility + ordering. Stored as comma-separated "NAME:0|1"
     // pairs. Reconciliation against the live tab universe happens at the
     // ViewModel boundary — repo deals with raw name/enabled pairs only.
