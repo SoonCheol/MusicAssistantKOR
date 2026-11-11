@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -331,6 +332,9 @@ fun PlayersPager(
                         onShown = homeScreenViewModel::onPlayerSwipeHintShown,
                     ),
                 state = playerPagerState,
+                // Expanded mode reserves player switching for the dedicated device
+                // strip below the queue, preventing accidental transport taps.
+                userScrollEnabled = !expanded,
                 key = { page -> playerDataList.getOrNull(page)?.player?.id ?: page },
             ) { page ->
                 val player = playerDataList.getOrNull(page) ?: return@HorizontalPager
@@ -1008,7 +1012,44 @@ private fun ExpandedPlayerPage(
                                 playerAction(player, PlayerAction.SeekTo(chapterSeekSeconds(chapter.start)))
                             },
                         )
-                    } else {
+                    }
+                    if (!showSideQueue && !isQueueExpanded && allPlayers.size > 1) {
+                        // Separate output-device swipe surface; LP swipe stays track navigation.
+                        var deviceDrag by remember { mutableStateOf(0f) }
+                        val deviceIndex = allPlayers.indexOfFirst { it.playerId == player.playerId }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .pointerInput(deviceIndex, allPlayers) {
+                                    detectHorizontalDragGestures(
+                                        onDragStart = { deviceDrag = 0f },
+                                        onHorizontalDrag = { change, delta ->
+                                            deviceDrag += delta
+                                            change.consume()
+                                        },
+                                        onDragEnd = {
+                                            val step = if (deviceDrag < -60.dp.toPx()) 1
+                                                else if (deviceDrag > 60.dp.toPx()) -1 else 0
+                                            val next = (deviceIndex + step).coerceIn(0, allPlayers.lastIndex)
+                                            if (step != 0 && next != deviceIndex) {
+                                                moveToPlayer(allPlayers[next].playerId)
+                                            }
+                                            deviceDrag = 0f
+                                        },
+                                        onDragCancel = { deviceDrag = 0f },
+                                    )
+                                },
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "‹   " + player.player.name + "   ›",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = colors.controlTint,
+                            )
+                        }
+                    } else if (showSideQueue) {
                         Spacer(
                             modifier = Modifier.fillMaxWidth()
                                 .height(contentPadding.calculateBottomPadding()),
