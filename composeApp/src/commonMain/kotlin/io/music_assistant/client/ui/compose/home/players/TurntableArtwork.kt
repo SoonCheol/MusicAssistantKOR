@@ -1,7 +1,6 @@
 package io.music_assistant.client.ui.compose.home.players
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -12,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
@@ -50,7 +50,9 @@ internal fun TurntableArtwork(
     onNext: () -> Unit,
 ) {
     // One revolution in 1800 ms approximates 33 1/3 RPM.
-    val rotation = remember { Animatable(0f) }
+    // Frame-driven state avoids the previously non-moving repeat-Animatable path.
+    // Both vinyl and album artwork observe the same rotation value.
+    var rotationDegrees by remember { mutableFloatStateOf(0f) }
     val trackSlide = remember { Animatable(0f) }
     var lastTitle by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
     var swipeDirection by remember { mutableFloatStateOf(1f) }
@@ -62,12 +64,19 @@ internal fun TurntableArtwork(
         lastTitle = title
     }
     LaunchedEffect(playing) {
-        while (playing) {
-            rotation.animateTo(
-                rotation.value + 360f,
-                animationSpec = tween(durationMillis = 1800, easing = LinearEasing),
-            )
-            rotation.snapTo(rotation.value % 360f)
+        if (playing) {
+            var previousFrameNanos = 0L
+            while (true) {
+                withFrameNanos { frameNanos ->
+                    if (previousFrameNanos != 0L) {
+                        val elapsedSeconds = ((frameNanos - previousFrameNanos) / 1_000_000_000f)
+                            .coerceIn(0f, 0.05f)
+                        // 33 1/3 revolutions per minute = 200 degrees per second.
+                        rotationDegrees = (rotationDegrees + elapsedSeconds * 200f) % 360f
+                    }
+                    previousFrameNanos = frameNanos
+                }
+            }
         }
     }
     val armProgress by animateFloatAsState(
@@ -107,22 +116,22 @@ internal fun TurntableArtwork(
     ) {
         Box(
             modifier = Modifier
-                .fillMaxSize(0.90f)
+                .fillMaxSize(0.92f)
                 .graphicsLayer {
-                    rotationZ = rotation.value
+                    rotationZ = rotationDegrees
                     translationX = trackSlide.value * density
                 },
             contentAlignment = Alignment.Center,
         ) {
             Canvas(Modifier.fillMaxSize()) {
                 val radius = size.minDimension * 0.49f
-                drawCircle(Color(0xFF090B10), radius = radius)
-                drawCircle(Color(0xFF242B35), radius = radius * 0.97f)
-                drawCircle(Color(0xFF10141B), radius = radius * 0.94f)
-                for (n in 0..17) {
+                drawCircle(Color(0xFF718A94), radius = radius)
+                drawCircle(Color(0xFF050608), radius = radius * 0.94f)
+                drawCircle(Color(0xFF121417), radius = radius * 0.90f)
+                for (n in 0..8) {
                     drawCircle(
                         color = if (n % 3 == 0) Color(0xFF656D78) else Color(0xFF454A54),
-                        radius = radius * (0.55f + n * 0.022f),
+                        radius = radius * (0.64f + n * 0.027f),
                         style = androidx.compose.ui.graphics.drawscope.Stroke(width = 0.8f),
                         alpha = if (n % 3 == 0) 0.35f else 0.18f,
                     )
@@ -138,7 +147,7 @@ internal fun TurntableArtwork(
                     topLeft = Offset(center.x - radius * 0.87f, center.y - radius * 0.87f),
                     size = androidx.compose.ui.geometry.Size(radius * 1.74f, radius * 1.74f),
                 )
-                drawCircle(Color(0xFF2C323C), radius = radius * 0.46f)
+                drawCircle(Color(0xFF111318), radius = radius * 0.64f)
             }
             val placeholder = rememberPlaceholderPainter(
                 backgroundColor = color,
@@ -146,7 +155,7 @@ internal fun TurntableArtwork(
                 icon = icon,
             )
             Box(
-                modifier = Modifier.fillMaxSize(0.42f).clip(CircleShape),
+                modifier = Modifier.fillMaxSize(0.60f).clip(CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 if (imageUrl != null) {
@@ -174,12 +183,12 @@ internal fun TurntableArtwork(
             }
         }
         Canvas(Modifier.fillMaxSize()) {
-            val pivot = Offset(size.width * 0.94f, size.height * 0.08f)
+            val pivot = Offset(size.width * 0.89f, size.height * 0.10f)
             // Resting stylus is outside the record; move smoothly onto its grooves.
-            val restElbow = Offset(size.width * 0.98f, size.height * 0.43f)
-            val playElbow = Offset(size.width * 0.89f, size.height * 0.42f)
-            val restTip = Offset(size.width * 0.96f, size.height * 0.67f)
-            val playTip = Offset(size.width * 0.73f, size.height * 0.55f)
+            val restElbow = Offset(size.width * 0.99f, size.height * 0.43f)
+            val playElbow = Offset(size.width * 0.92f, size.height * 0.39f)
+            val restTip = Offset(size.width * 0.95f, size.height * 0.51f)
+            val playTip = Offset(size.width * 0.79f, size.height * 0.50f)
             fun between(a: Offset, b: Offset) = Offset(
                 a.x + (b.x - a.x) * armProgress,
                 a.y + (b.y - a.y) * armProgress,
