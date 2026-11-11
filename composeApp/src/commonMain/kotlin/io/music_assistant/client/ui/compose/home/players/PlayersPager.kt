@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowRight
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
@@ -68,6 +69,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -79,6 +81,7 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
@@ -1006,21 +1009,27 @@ private fun ExpandedPlayerPage(
                             queueAction = queueAction,
                             tint = colors.controlTint,
                             isCurrentPage = isCurrentPage,
-                            contentPadding = contentPadding,
+                            // The device selector below must sit above system navigation;
+                            // do not insert the bottom inset between queue and device.
+                            contentPadding = if (!isQueueExpanded) PaddingValues(0.dp) else contentPadding,
                             livePositionFlow = livePositionFlow,
                             onChapterClick = { chapter ->
                                 playerAction(player, PlayerAction.SeekTo(chapterSeekSeconds(chapter.start)))
                             },
                         )
                     }
-                    if (!showSideQueue && !isQueueExpanded && allPlayers.size > 1) {
-                        // Separate output-device swipe surface; LP swipe stays track navigation.
-                        var deviceDrag by remember { mutableStateOf(0f) }
+                    if (!showSideQueue && !isQueueExpanded) {
+                        // Dedicated, legible player switcher under queue button.
+                        // System inset is applied AFTER the switcher, never between cards.
                         val deviceIndex = allPlayers.indexOfFirst { it.playerId == player.playerId }
+                        var deviceDrag by remember { mutableStateOf(0f) }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp)
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .height(56.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f))
                                 .pointerInput(deviceIndex, allPlayers) {
                                     detectHorizontalDragGestures(
                                         onDragStart = { deviceDrag = 0f },
@@ -1029,8 +1038,11 @@ private fun ExpandedPlayerPage(
                                             change.consume()
                                         },
                                         onDragEnd = {
-                                            val step = if (deviceDrag < -60.dp.toPx()) 1
-                                                else if (deviceDrag > 60.dp.toPx()) -1 else 0
+                                            val step = when {
+                                                deviceDrag < -60.dp.toPx() -> 1
+                                                deviceDrag > 60.dp.toPx() -> -1
+                                                else -> 0
+                                            }
                                             val next = (deviceIndex + step).coerceIn(0, allPlayers.lastIndex)
                                             if (step != 0 && next != deviceIndex) {
                                                 moveToPlayer(allPlayers[next].playerId)
@@ -1039,16 +1051,34 @@ private fun ExpandedPlayerPage(
                                         },
                                         onDragCancel = { deviceDrag = 0f },
                                     )
-                                },
-                            horizontalArrangement = Arrangement.Center,
+                                }
+                                .clickable(onClick = onSelectPlayer),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(
-                                text = "‹   " + player.player.name + "   ›",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = colors.controlTint,
+                            Icon(Icons.Default.ExpandMore, contentDescription = null,
+                                modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = 90f },
+                                tint = colors.controlTint.copy(alpha = 0.72f))
+                            Icon(
+                                painter = painterResource(player.iconRes()),
+                                contentDescription = null,
+                                modifier = Modifier.size(22.dp),
+                                tint = colors.controlTint,
                             )
+                            Text(
+                                text = player.player.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.controlTint,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                            Icon(Icons.Default.ExpandMore, contentDescription = null,
+                                modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = -90f },
+                                tint = colors.controlTint.copy(alpha = 0.72f))
                         }
+                        Spacer(Modifier.height(contentPadding.calculateBottomPadding()))
                     } else if (showSideQueue) {
                         Spacer(
                             modifier = Modifier.fillMaxWidth()
