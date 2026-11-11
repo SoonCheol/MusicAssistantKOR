@@ -115,6 +115,13 @@ fun HomeScreen(
             homeScreenViewModel.updateHomeRowLabels(
                 recommendationsState.data.associate { it.folder.itemId to it.folder.displayName },
             )
+            homeScreenViewModel.updateHomeRowDefaultStyles(
+                recommendationsState.data.mapNotNull { row ->
+                    row.resolvedItems?.takeIf { it.isNotEmpty() }?.let { items ->
+                        row.folder.itemId to items.all { it.playsOnTap }
+                    }
+                }.toMap(),
+            )
         }
     }
     val shortcutsState = homeScreenState.shortcuts
