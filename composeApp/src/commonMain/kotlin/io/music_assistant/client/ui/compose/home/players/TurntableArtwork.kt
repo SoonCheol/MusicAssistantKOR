@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -39,6 +40,7 @@ internal fun TurntableArtwork(
     title: String?,
     icon: ImageVector,
     playing: Boolean,
+    trackKey: Pair<String?, String?>,
     color: Color,
     iconColor: Color,
 ) {
@@ -60,9 +62,21 @@ internal fun TurntableArtwork(
             }
         }
     }
+    // On an actively playing track change, lift the arm briefly before lowering it
+    // onto the new cover. Paused or stopped tracks keep the arm parked.
+    var armEngaged by remember { androidx.compose.runtime.mutableStateOf(playing) }
+    LaunchedEffect(trackKey, playing) {
+        if (!playing) {
+            armEngaged = false
+        } else {
+            armEngaged = false
+            delay(450)
+            armEngaged = true
+        }
+    }
     val armProgress by animateFloatAsState(
-        targetValue = if (playing) 1f else 0f,
-        animationSpec = tween(durationMillis = 450),
+        targetValue = if (armEngaged) 1f else 0f,
+        animationSpec = tween(durationMillis = 300),
         label = "tonearm",
     )
     // Artwork is display-only; track swipes are recognized exclusively below transport.

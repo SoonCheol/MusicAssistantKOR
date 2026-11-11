@@ -5,6 +5,7 @@ package io.music_assistant.client.ui.compose.home
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,12 +45,15 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -104,6 +108,7 @@ fun CollapsibleQueue(
     queue: DataState<Queue>,
     isQueueExpanded: Boolean,
     onQueueExpandedSwitch: () -> Unit,
+    onTrackSwipe: ((Float) -> Unit)? = null,
     onGoToLibrary: () -> Unit,
     queueAction: (QueueAction) -> Unit,
     tint: Color,
@@ -137,8 +142,29 @@ fun CollapsibleQueue(
             currentPos?.let { stringResource(Res.string.queue_label_with_position, it, list.size) }
         } ?: defaultLabel
 
+        // Detect horizontal gestures on the button itself, not an enclosing volume/queue
+        // column. The normal Button onClick remains available for short taps.
+        val latestTrackSwipe by rememberUpdatedState(onTrackSwipe)
+        val swipeThresholdPx = with(LocalDensity.current) { 30.dp.toPx() }
         Button(
             modifier = Modifier
+                .pointerInput(isQueueExpanded, swipeThresholdPx) {
+                    var dragDistance = 0f
+                    detectHorizontalDragGestures(
+                        onDragStart = { dragDistance = 0f },
+                        onHorizontalDrag = { change, dragAmount ->
+                            dragDistance += dragAmount
+                            change.consume()
+                        },
+                        onDragEnd = {
+                            if (!isQueueExpanded && kotlin.math.abs(dragDistance) >= swipeThresholdPx) {
+                                latestTrackSwipe?.invoke(dragDistance)
+                            }
+                            dragDistance = 0f
+                        },
+                        onDragCancel = { dragDistance = 0f },
+                    )
+                }
                 .let {
                     if (!isQueueExpanded) {
                         it.padding(contentPadding)

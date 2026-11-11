@@ -1,10 +1,5 @@
 package io.music_assistant.client.ui.compose.home.players
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -47,7 +42,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -348,15 +342,12 @@ fun FullPlayerItem(
     navigateToItem: (AppMediaItem) -> Unit = {},
     // The chooser for a multi-artist track lives in the dialog host, outside the pager.
     onChooseArtist: () -> Unit = {},
-    trackSwipeDirection: Float = 1f,
 ) {
     val currentMedia = item.player.currentMedia
     val turntableEnabled by koinInject<SettingsRepository>().turntableEnabled.collectAsStateWithLifecycle()
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
     val controlTint = colors.controlTint
     val density = LocalDensity.current
-    val slideDirection = if (trackSwipeDirection < 0f) -1 else 1
-    // Retain outgoing media until it fully slides out; incoming art/metadata arrive together.
     // Across a horizontal fold the artwork ends above the crease, which leaves the controls, pushed
     // down by SpaceBetween, on the lower half. Without a fold the position is not measured, so a drag
     // or an animation that moves the player does not recompose it.
@@ -391,50 +382,38 @@ fun FullPlayerItem(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            AnimatedContent(
-                targetState = currentMedia,
-                transitionSpec = {
-                    slideInHorizontally(tween(350)) { it * slideDirection } togetherWith
-                        slideOutHorizontally(tween(350)) { -it * slideDirection }
-                },
-                modifier = Modifier.fillMaxSize().clipToBounds(),
-                label = "vinylTrackChange",
-            ) { animatedMedia ->
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                if (turntableEnabled && animatedMedia != null) {
-                    TurntableArtwork(
-                        imageUrl = animatedMedia.imageUrl,
-                        title = animatedMedia.title,
-                        icon = animatedMedia.defaultIcon,
-                        playing = item.player.isPlaying,
-                        color = colors.dominant,
+            if (turntableEnabled && currentMedia != null) {
+                TurntableArtwork(
+                    imageUrl = currentMedia.imageUrl,
+                    title = currentMedia.title,
+                    icon = currentMedia.defaultIcon,
+                    playing = item.player.isPlaying,
+                    trackKey = currentMedia.imageUrl to currentMedia.title,
+                    color = colors.dominant,
+                    iconColor = onPrimaryContainer,
+                )
+            } else {
+                currentMedia?.imageUrl?.let {
+                    val placeholder = rememberPlaceholderPainter(
+                        backgroundColor = colors.dominant,
                         iconColor = onPrimaryContainer,
+                        icon = currentMedia.defaultIcon,
                     )
-                } else {
-                    animatedMedia?.imageUrl?.let {
-                        val placeholder =
-                            rememberPlaceholderPainter(
-                                backgroundColor = colors.dominant,
-                                iconColor = onPrimaryContainer,
-                                icon = animatedMedia.defaultIcon,
-                            )
-                        AsyncImage(
-                            placeholder = placeholder,
-                            fallback = placeholder,
-                            error = placeholder,
-                            model = rememberArtworkRequest(it),
-                            contentDescription = animatedMedia.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    } ?: Icon(
-                        imageVector = animatedMedia?.defaultIcon ?: AlbumIcon,
-                        contentDescription = null,
-                        modifier = Modifier.size(120.dp),
-                        tint = onPrimaryContainer,
+                    AsyncImage(
+                        placeholder = placeholder,
+                        fallback = placeholder,
+                        error = placeholder,
+                        model = rememberArtworkRequest(it),
+                        contentDescription = currentMedia.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
                     )
-                }
-                }
+                } ?: Icon(
+                    imageVector = currentMedia?.defaultIcon ?: AlbumIcon,
+                    contentDescription = null,
+                    modifier = Modifier.size(120.dp),
+                    tint = onPrimaryContainer,
+                )
             }
         }
 
@@ -483,15 +462,6 @@ fun FullPlayerItem(
         }
         val goToArtistLabel = stringResource(Res.string.action_go_to_artist)
 
-        AnimatedContent(
-            targetState = trackName to (currentChapter?.displayName ?: currentMedia?.subtitle),
-            transitionSpec = {
-                slideInHorizontally(tween(350)) { it * slideDirection } togetherWith
-                    slideOutHorizontally(tween(350)) { -it * slideDirection }
-            },
-            modifier = Modifier.fillMaxWidth().clipToBounds(),
-            label = "trackTitleArtistChange",
-        ) { animatedMetadata ->
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -523,7 +493,7 @@ fun FullPlayerItem(
                         .basicMarquee()
                         .padding(horizontal = FULL_PLAYER_HORIZONTAL_PADDING)
                         .alphaOn(poweredOff || currentMedia?.title != null),
-                    text = animatedMetadata.first,
+                    text = trackName,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
@@ -550,7 +520,7 @@ fun FullPlayerItem(
                         // RenderThread's native stack (SIGSEGV in HWUI prepareTree) — no-subtitle radios
                         // hit this. The empty Text still reserves one line; it just doesn't scroll.
                         // Chapter mode uses the active chapter name as the subtitle.
-                        val subtitle = animatedMetadata.second
+                        val subtitle = (currentChapter?.displayName ?: currentMedia?.subtitle)
                         Text(
                             modifier = Modifier.fillMaxWidth()
                                 .then(onSubtitleClick?.let { Modifier.clickable(onClick = it) } ?: Modifier)
@@ -575,8 +545,6 @@ fun FullPlayerItem(
                     }
                 }
             }
-            }
-
 
         // Buffered-ahead seconds (local player only; null → 0 for remote/preview).
         val bufferedAheadSec = bufferedAheadSecFlow
