@@ -373,8 +373,13 @@ fun FullPlayerItem(
                 .then(artworkMaxHeight?.let { Modifier.heightIn(max = it) } ?: Modifier)
                 .aspectRatio(1f)
                 .heightIn(max = 500.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(colors.dominant.alphaOn(currentMedia != null)),
+                // Vinyl floats on the original artwork-derived player gradient.
+                // Only the legacy artwork uses a square background.
+                .then(
+                    if (turntableEnabled && currentMedia != null) Modifier
+                    else Modifier.clip(RoundedCornerShape(16.dp))
+                        .background(colors.dominant.alphaOn(currentMedia != null)),
+                ),
             contentAlignment = Alignment.Center,
         ) {
             if (turntableEnabled && currentMedia != null) {
