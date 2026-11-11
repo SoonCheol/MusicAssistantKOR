@@ -192,7 +192,7 @@ fun HomeScreen(
                     libraryActions = actionsViewModel,
                     progressActions = actionsViewModel,
                     providerIconFetcher = providerIconFetcher,
-                    compact = homeRowStyles[row.category.id] == true,
+                    compact = homeRowStyles[row.category.id],
                 )
             }
 
