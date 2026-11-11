@@ -97,6 +97,11 @@ class HomeScreenViewModel(
     private val transcriptRepository: TranscriptRepository,
     private val sendspinDelays: SendspinDelayRepository,
 ) : ViewModel() {
+    val homeRowStyles = settings.homeRowStyles
+
+    fun updateHomeRowLabels(labels: Map<String, String>) =
+        settings.updateHomeRowLabels(labels)
+
     private val jobs = mutableListOf<Job>()
     private var loadDataJob: Job? = null
     private var deepLinkPlayerJob: Job? = null
