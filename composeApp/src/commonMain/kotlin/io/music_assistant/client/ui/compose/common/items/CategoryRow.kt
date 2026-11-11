@@ -212,7 +212,7 @@ fun CategoryRow(
 
     // A row of tap-to-play items shows list items, two in each column.
     val stackedPairs = remember(mediaItems, compact) {
-        if (compact) mediaItems.chunked(3)
+        if (compact) mediaItems.chunked(2)
         else mediaItems.takeIf { items -> items.isNotEmpty() && items.all { it.playsOnTap } }?.chunked(2)
     }
 
