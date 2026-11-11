@@ -74,7 +74,6 @@ import io.music_assistant.client.ui.compose.common.icons.TrackIcon
 import io.music_assistant.client.ui.compose.common.items.DISABLED_ITEM_ALPHA
 import io.music_assistant.client.ui.compose.common.items.localizedSubtitle
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
-import io.music_assistant.client.ui.contentColorByLuminance
 import io.music_assistant.client.utils.conditional
 import io.music_assistant.client.utils.formatDuration
 import kotlinx.coroutines.flow.Flow
@@ -138,7 +137,6 @@ fun CollapsibleQueue(
             currentPos?.let { stringResource(Res.string.queue_label_with_position, it, list.size) }
         } ?: defaultLabel
 
-        val queueButtonContentColor = tint.contentColorByLuminance()
         Button(
             modifier = Modifier
                 .let {
@@ -150,8 +148,8 @@ fun CollapsibleQueue(
                 }
                 .fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
-                containerColor = tint,
-                contentColor = queueButtonContentColor,
+                containerColor = Color(0xFF145779),
+                contentColor = Color.White,
             ),
             onClick = { onQueueExpandedSwitch() },
         ) {
