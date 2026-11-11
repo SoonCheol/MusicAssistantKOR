@@ -1,6 +1,9 @@
 package io.music_assistant.client.ui.compose.home.players
 
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -44,10 +47,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -352,22 +355,8 @@ fun FullPlayerItem(
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
     val controlTint = colors.controlTint
     val density = LocalDensity.current
-    // The artwork and metadata enter as one horizontal page when the media changes.
-    // Keep seek, transport, volume and other output-device controls stationary.
-    val trackEnter = remember { Animatable(0f) }
-    var previousMediaKey by remember { mutableStateOf<String?>(null) }
-    val mediaKey = currentMedia?.let { "${it.title}|${it.subtitle}|${it.imageUrl}" }
-    LaunchedEffect(mediaKey) {
-        if (mediaKey != null && previousMediaKey != null && mediaKey != previousMediaKey) {
-            trackEnter.snapTo(240f * trackSwipeDirection)
-            trackEnter.animateTo(0f, tween(durationMillis = 320))
-        }
-        previousMediaKey = mediaKey
-    }
-    val trackEntryModifier = Modifier.graphicsLayer {
-        translationX = trackEnter.value * density.density
-    }
-
+    val slideDirection = if (trackSwipeDirection < 0f) -1 else 1
+    // Retain outgoing media until it fully slides out; incoming art/metadata arrive together.
     // Across a horizontal fold the artwork ends above the crease, which leaves the controls, pushed
     // down by SpaceBetween, on the lower half. Without a fold the position is not measured, so a drag
     // or an animation that moves the player does not recompose it.
@@ -386,7 +375,7 @@ fun FullPlayerItem(
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         Box(
-            modifier = trackEntryModifier
+            modifier = Modifier
                 .padding(horizontal = FULL_PLAYER_HORIZONTAL_PADDING)
                 .testTag(FullPlayerSemantics.ARTWORK_TAG)
                 .weight(1f, fill = false)
@@ -402,38 +391,50 @@ fun FullPlayerItem(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            if (turntableEnabled && currentMedia != null) {
-                TurntableArtwork(
-                    imageUrl = currentMedia.imageUrl,
-                    title = currentMedia.title,
-                    icon = currentMedia.defaultIcon,
-                    playing = item.player.isPlaying,
-                    color = colors.dominant,
-                    iconColor = onPrimaryContainer,
-                )
-            } else {
-                currentMedia?.imageUrl?.let {
-                    val placeholder =
-                        rememberPlaceholderPainter(
-                            backgroundColor = colors.dominant,
-                            iconColor = onPrimaryContainer,
-                            icon = currentMedia.defaultIcon,
-                        )
-                    AsyncImage(
-                        placeholder = placeholder,
-                        fallback = placeholder,
-                        error = placeholder,
-                        model = rememberArtworkRequest(it),
-                        contentDescription = currentMedia.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
+            AnimatedContent(
+                targetState = currentMedia,
+                transitionSpec = {
+                    slideInHorizontally(tween(350)) { it * slideDirection } togetherWith
+                        slideOutHorizontally(tween(350)) { -it * slideDirection }
+                },
+                modifier = Modifier.fillMaxSize().clipToBounds(),
+                label = "vinylTrackChange",
+            ) { animatedMedia ->
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                if (turntableEnabled && animatedMedia != null) {
+                    TurntableArtwork(
+                        imageUrl = animatedMedia.imageUrl,
+                        title = animatedMedia.title,
+                        icon = animatedMedia.defaultIcon,
+                        playing = item.player.isPlaying,
+                        color = colors.dominant,
+                        iconColor = onPrimaryContainer,
                     )
-                } ?: Icon(
-                    imageVector = currentMedia?.defaultIcon ?: AlbumIcon,
-                    contentDescription = null,
-                    modifier = Modifier.size(120.dp),
-                    tint = onPrimaryContainer,
-                )
+                } else {
+                    animatedMedia?.imageUrl?.let {
+                        val placeholder =
+                            rememberPlaceholderPainter(
+                                backgroundColor = colors.dominant,
+                                iconColor = onPrimaryContainer,
+                                icon = animatedMedia.defaultIcon,
+                            )
+                        AsyncImage(
+                            placeholder = placeholder,
+                            fallback = placeholder,
+                            error = placeholder,
+                            model = rememberArtworkRequest(it),
+                            contentDescription = animatedMedia.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } ?: Icon(
+                        imageVector = animatedMedia?.defaultIcon ?: AlbumIcon,
+                        contentDescription = null,
+                        modifier = Modifier.size(120.dp),
+                        tint = onPrimaryContainer,
+                    )
+                }
+                }
             }
         }
 
@@ -482,89 +483,100 @@ fun FullPlayerItem(
         }
         val goToArtistLabel = stringResource(Res.string.action_go_to_artist)
 
-        Column(
-            modifier = trackEntryModifier
-                .fillMaxWidth()
-                .clearAndSetSemantics {
-                    contentDescription = trackContentDescription
-                    // The cleared subtree hides the lines' own clicks, so expose them here.
-                    onTitleClick?.let {
-                        customActions = listOf(
-                            CustomAccessibilityAction(goToTrackLabel) {
-                                it()
-                                true
-                            },
-                        )
-                    }
-                    onSubtitleClick?.let {
-                        onClick(goToArtistLabel) {
-                        it()
-                    true
-                    }
-                    }
-                },
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
+        AnimatedContent(
+            targetState = trackName to (currentChapter?.displayName ?: currentMedia?.subtitle),
+            transitionSpec = {
+                slideInHorizontally(tween(350)) { it * slideDirection } togetherWith
+                    slideOutHorizontally(tween(350)) { -it * slideDirection }
+            },
+            modifier = Modifier.fillMaxWidth().clipToBounds(),
+            label = "trackTitleArtistChange",
+        ) { animatedMetadata ->
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .then(onTitleClick?.let { Modifier.clickable(onClick = it) } ?: Modifier)
-                    .fadingEdges()
-                    .basicMarquee()
-                    .padding(horizontal = FULL_PLAYER_HORIZONTAL_PADDING)
-                    .alphaOn(poweredOff || currentMedia?.title != null),
-                text = trackName,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            when {
-                // Powered off: no subtitle line.
-                poweredOff -> Unit
-                item.queueInfo?.currentItem?.isPlayable == false -> {
-                    Text(
-                        text = stringResource(Res.string.queue_cannot_play),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.inactive(),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-
-                else -> {
-                    // Always render the subtitle line so every player item keeps the same height,
-                    // even when blank. But attach `basicMarquee()` ONLY when there's real text:
-                    // marquee on a blank string builds a degenerate layer tree that overflows the
-                    // RenderThread's native stack (SIGSEGV in HWUI prepareTree) — no-subtitle radios
-                    // hit this. The empty Text still reserves one line; it just doesn't scroll.
-                    // Chapter mode uses the active chapter name as the subtitle.
-                    val subtitle = currentChapter?.displayName ?: currentMedia?.subtitle
-                    Text(
-                        modifier = Modifier.fillMaxWidth()
-                            .then(onSubtitleClick?.let { Modifier.clickable(onClick = it) } ?: Modifier)
-                            .then(
-                                if (subtitle.isNullOrBlank()) {
-                                    Modifier
-                                } else {
-                                    Modifier
-                                        .fadingEdges()
-                                        .basicMarquee()
-                                        .padding(horizontal = FULL_PLAYER_HORIZONTAL_PADDING)
+                    .clearAndSetSemantics {
+                        contentDescription = trackContentDescription
+                        // The cleared subtree hides the lines' own clicks, so expose them here.
+                        onTitleClick?.let {
+                            customActions = listOf(
+                                CustomAccessibilityAction(goToTrackLabel) {
+                                    it()
+                                    true
                                 },
                             )
-                            .alphaOn(currentMedia?.title != null),
-                        text = subtitle.orEmpty(), // TODO take from currentItem?
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                        }
+                        onSubtitleClick?.let {
+                            onClick(goToArtistLabel) {
+                            it()
+                        true
+                        }
+                        }
+                    },
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(onTitleClick?.let { Modifier.clickable(onClick = it) } ?: Modifier)
+                        .fadingEdges()
+                        .basicMarquee()
+                        .padding(horizontal = FULL_PLAYER_HORIZONTAL_PADDING)
+                        .alphaOn(poweredOff || currentMedia?.title != null),
+                    text = animatedMetadata.first,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                when {
+                    // Powered off: no subtitle line.
+                    poweredOff -> Unit
+                    item.queueInfo?.currentItem?.isPlayable == false -> {
+                        Text(
+                            text = stringResource(Res.string.queue_cannot_play),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.inactive(),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+    
+                    else -> {
+                        // Always render the subtitle line so every player item keeps the same height,
+                        // even when blank. But attach `basicMarquee()` ONLY when there's real text:
+                        // marquee on a blank string builds a degenerate layer tree that overflows the
+                        // RenderThread's native stack (SIGSEGV in HWUI prepareTree) — no-subtitle radios
+                        // hit this. The empty Text still reserves one line; it just doesn't scroll.
+                        // Chapter mode uses the active chapter name as the subtitle.
+                        val subtitle = animatedMetadata.second
+                        Text(
+                            modifier = Modifier.fillMaxWidth()
+                                .then(onSubtitleClick?.let { Modifier.clickable(onClick = it) } ?: Modifier)
+                                .then(
+                                    if (subtitle.isNullOrBlank()) {
+                                        Modifier
+                                    } else {
+                                        Modifier
+                                            .fadingEdges()
+                                            .basicMarquee()
+                                            .padding(horizontal = FULL_PLAYER_HORIZONTAL_PADDING)
+                                    },
+                                )
+                                .alphaOn(currentMedia?.title != null),
+                            text = subtitle.orEmpty(), // TODO take from currentItem?
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
-        }
+            }
+
 
         // Buffered-ahead seconds (local player only; null → 0 for remote/preview).
         val bufferedAheadSec = bufferedAheadSecFlow
