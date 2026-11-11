@@ -41,6 +41,14 @@ jobs:
         if: ${{ !startsWith(github.head_ref, 'chore/bump-android-v') && !startsWith(github.head_ref, 'chore/bump-sendspin-v') }}
         run: ./gradlew :androidApp:assembleDebug
 
+      - name: Upload debug APK for manual testing
+        if: ${{ !startsWith(github.head_ref, 'chore/bump-android-v') && !startsWith(github.head_ref, 'chore/bump-sendspin-v') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: MusicAssistantKOR-discover-layout-debug
+          path: androidApp/build/outputs/apk/debug/*.apk
+          retention-days: 14
+
       - name: Run tests
         if: ${{ !startsWith(github.head_ref, 'chore/bump-android-v') && !startsWith(github.head_ref, 'chore/bump-sendspin-v') }}
         run: ./gradlew :androidApp:testDebug testAndroidHostTest

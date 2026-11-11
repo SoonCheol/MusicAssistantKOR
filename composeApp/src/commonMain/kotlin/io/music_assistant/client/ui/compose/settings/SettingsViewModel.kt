@@ -168,6 +168,12 @@ class SettingsViewModel(
         }
     }
 
+    val homeRowStyles = settings.homeRowStyles
+    val homeRowLabels = settings.homeRowLabels
+
+    fun setHomeRowCompact(id: String, compact: Boolean) =
+        settings.setHomeRowCompact(id, compact)
+
     // Misc settings
     val allowLandscapeOnAllDevices = settings.allowLandscapeOnAllDevices
 
