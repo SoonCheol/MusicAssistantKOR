@@ -150,9 +150,9 @@
   <string name="cd_album_item">%2$s의 앨범 "%1$s"</string>
   <string name="cd_ambient_sound_on">배경음 켜짐</string>
   <string name="cd_applied">적용됨</string>
-  <string name="cd_autoplay_off">자동 재생 꺼짐</string>
-  <string name="cd_autoplay_on">자동 재생 켜짐</string>
-  <string name="cd_autoplay_repeat_locked">반복 재생 중에는 자동 재생이 꺼집니다</string>
+  <string name="cd_autoplay_off">자동 선곡 꺼짐</string>
+  <string name="cd_autoplay_on">자동 선곡 켜짐</string>
+  <string name="cd_autoplay_repeat_locked">반복 재생 중에는 자동 선곡이 꺼집니다</string>
   <string name="cd_close">닫기</string>
   <string name="cd_collapse_sendspin_advanced">고급 설정 숨기기</string>
   <string name="cd_connection_history">연결 기록</string>
@@ -355,7 +355,7 @@
   <string name="nav_system">시스템</string>
   <string name="not_connected_retry">연결되지 않았습니다. 다시 연결한 후 시도하세요.</string>
   <string name="playback_speed_dialog_title">재생 속도</string>
-  <string name="player_autoplay">자동 재생</string>
+  <string name="player_autoplay">자동 선곡</string>
   <string name="player_crossfade">크로스페이드</string>
   <string name="player_dynamic_colors">동적 색상</string>
   <string name="player_needs_setup">설정이 필요합니다</string>
