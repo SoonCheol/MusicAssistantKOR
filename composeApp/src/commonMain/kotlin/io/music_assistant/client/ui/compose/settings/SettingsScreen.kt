@@ -431,6 +431,7 @@ private fun RecommendationDisplaySection(viewModel: SettingsViewModel) {
     var expanded by remember { mutableStateOf(false) }
     val labels by viewModel.homeRowLabels.collectAsStateWithLifecycle()
     val styles by viewModel.homeRowStyles.collectAsStateWithLifecycle()
+    val defaults by viewModel.homeRowDefaultStyles.collectAsStateWithLifecycle()
     SectionCard {
         Row(
             modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
@@ -458,7 +459,7 @@ private fun RecommendationDisplaySection(viewModel: SettingsViewModel) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(title, modifier = Modifier.weight(1f), maxLines = 2)
-                    val compact = styles[id] == true
+                    val compact = styles[id] ?: defaults[id] ?: false
                     TextButton(onClick = { viewModel.setHomeRowCompact(id, false) }) {
                         Text("크게", color = if (!compact) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
