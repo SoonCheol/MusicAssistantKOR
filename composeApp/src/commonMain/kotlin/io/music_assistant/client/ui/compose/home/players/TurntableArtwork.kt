@@ -3,7 +3,6 @@ package io.music_assistant.client.ui.compose.home.players
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
@@ -24,10 +23,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.music_assistant.client.imageloader.rememberArtworkRequest
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
@@ -45,8 +41,6 @@ internal fun TurntableArtwork(
     playing: Boolean,
     color: Color,
     iconColor: Color,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
 ) {
     // 12 RPM (one revolution every 5 seconds), shared by vinyl and album image.
     var rotationDegrees by remember { mutableFloatStateOf(0f) }
@@ -71,31 +65,9 @@ internal fun TurntableArtwork(
         animationSpec = tween(durationMillis = 450),
         label = "tonearm",
     )
-    val thresholdPx = with(LocalDensity.current) { 85.dp.toPx() }
-    var swipeDistance by remember { mutableFloatStateOf(0f) }
-
+    // Artwork is display-only; track swipes are recognized exclusively below transport.
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(onPrevious, onNext, thresholdPx) {
-                detectHorizontalDragGestures(
-                    onDragStart = { swipeDistance = 0f },
-                    onHorizontalDrag = { change, amount ->
-                        swipeDistance += amount
-                        change.consume()
-                    },
-                    onDragEnd = {
-                        if (swipeDistance > thresholdPx) {
-                            onPrevious()
-                        }
-                        if (swipeDistance < -thresholdPx) {
-                            onNext()
-                        }
-                        swipeDistance = 0f
-                    },
-                    onDragCancel = { swipeDistance = 0f },
-                )
-            },
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
         Box(

@@ -5,6 +5,7 @@ package io.music_assistant.client.ui.compose.home.players
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -423,6 +424,11 @@ fun PlayersPager(
                 }
 
                 val colors by playerColors.getValue(player)
+                val backgroundAlbumColor by animateColorAsState(
+                    targetValue = colors.dominant.inactive(),
+                    animationSpec = tween(durationMillis = 480),
+                    label = "albumBackgroundCrossfade",
+                )
 
                 Box(modifier = Modifier.wrapContentHeight()) {
                     Column(
@@ -431,7 +437,7 @@ fun PlayersPager(
                                 brush = Brush.verticalGradient(
                                     listOf(
                                         MaterialTheme.colorScheme.surfaceContainerHigh,
-                                        colors.dominant.inactive(),
+                                        backgroundAlbumColor,
                                     ),
                                 ),
                             ),
@@ -643,6 +649,15 @@ private fun ExpandedPlayerPage(
     // then split the width 2:1, so the layout degrades smoothly from a large
     // tablet down to a phone in landscape.
     val showSideQueue = WindowClass.isWide()
+    var trackSwipeDirection by remember { mutableStateOf(1f) }
+    val trackSwipeThresholdPx = with(LocalDensity.current) { 72.dp.toPx() }
+    val onTrackSwipe: (Float) -> Unit = { delta ->
+        if (!isQueueExpanded && !showSideQueue && player.queueInfo?.currentItem != null) {
+            val action = if (delta < 0f) PlayerAction.Next else PlayerAction.Previous
+            trackSwipeDirection = if (delta < 0f) 1f else -1f
+            playerAction(player, action)
+        }
+    }
     val pageSplit = pageSplitOrNull(lyricsOpen = leftPageOverride != null, pagerStart = pagerStart)
     // Navigating away from the player collapses it, so the target screen is visible.
     val navigateAndClose: (AppMediaItem) -> Unit = remember(navigateToItem, onClose) {
@@ -862,158 +877,194 @@ private fun ExpandedPlayerPage(
                                 chapterProgressEnabled = chapterProgressEnabled,
                                 navigateToItem = navigateAndClose,
                                 onChooseArtist = onChooseArtist,
+                                trackSwipeDirection = trackSwipeDirection,
                             )
                         }
                     }
 
-                    // Fixed-height shell keeps album art space consistent whether
-                    // the volume control is shown for this player.
-                    Box(modifier = Modifier.fillMaxWidth().height(36.dp)) {
-                        if (player.player.isVolumeSliderAccessible && player.player.currentVolume != null) {
-                            var currentVolume by remember(player.player.currentVolume) {
-                                mutableStateOf(player.player.currentVolume)
-                            }
-                            val controlTint = colors.controlTint
-                            val volumeSliderColors = SliderDefaults.colors().copy(
-                                thumbColor = controlTint,
-                                activeTrackColor = controlTint,
-                                inactiveTrackColor = controlTint.inactive(),
-                            )
-                            val isGroupBound = player.childrenBinds.any { it.isBound }
-                            val isGroupForGesture by rememberUpdatedState(isGroupBound)
-                            Row(
-                                modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Icon(
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .alphaOn(player.player.canMute)
-                                        .clickable(enabled = player.player.canMute) {
-                                            playerAction(
-                                                player,
-                                                if (player.childrenBinds.none { it.isBound }) {
-                                                    PlayerAction.ToggleMute(player.player.currentMuteState)
-                                                } else {
-                                                    PlayerAction.GroupToggleMute(player.player.currentMuteState)
-                                                },
-                                            )
-                                        },
-                                    imageVector = if (player.player.currentMuteState) {
-                                        VolumeMutedIcon
-                                    } else {
-                                        VolumeIcon
+                    // Only the lower zone (below transport, through the queue button)
+                    // handles track changes. Child volume Slider retains its own gesture.
+                    val currentTrackSwipe by rememberUpdatedState(onTrackSwipe)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .conditional(isQueueExpanded) { weight(1f) }
+                            .pointerInput(player.playerId, isQueueExpanded, trackSwipeThresholdPx) {
+                                var horizontalDelta = 0f
+                                var inVolumeControls = false
+                                detectHorizontalDragGestures(
+                                    onDragStart = { start ->
+                                        horizontalDelta = 0f
+                                        // Preserve volume slider interaction; swipe starts on
+                                        // the area around/below it or on the queue button.
+                                        inVolumeControls = start.y < 36.dp.toPx()
                                     },
-                                    contentDescription = if (player.player.currentMuteState) {
-                                        stringResource(
-                                            Res.string.cd_unmute,
-                                        )
-                                    } else {
-                                        stringResource(Res.string.cd_mute)
+                                    onHorizontalDrag = { change, delta ->
+                                        if (!inVolumeControls && !isQueueExpanded) {
+                                            horizontalDelta += delta
+                                            change.consume()
+                                        }
                                     },
-                                    tint = controlTint,
+                                    onDragEnd = {
+                                        if (!inVolumeControls &&
+                                            kotlin.math.abs(horizontalDelta) >= trackSwipeThresholdPx) {
+                                            currentTrackSwipe(horizontalDelta)
+                                        }
+                                        horizontalDelta = 0f
+                                    },
+                                    onDragCancel = { horizontalDelta = 0f },
                                 )
-                                VolumeSliderBox(
-                                    modifier = Modifier.weight(1f),
-                                    hintColor = controlTint,
-                                    hintIconColor = MaterialTheme.colorScheme.background,
-                                    volume = { currentVolume },
-                                    onStepDown = {
-                                        playerAction(
-                                            player,
-                                            if (isGroupForGesture) {
-                                                PlayerAction.GroupVolumeDown
-                                            } else {
-                                                PlayerAction.VolumeDown
-                                            },
-                                        )
-                                    },
-                                    onStepUp = {
-                                        playerAction(
-                                            player,
-                                            if (isGroupForGesture) {
-                                                PlayerAction.GroupVolumeUp
-                                            } else {
-                                                PlayerAction.VolumeUp
-                                            },
-                                        )
-                                    },
+                            },
+                    ) {
+                        // Fixed-height shell keeps album art space consistent whether
+                        // the volume control is shown for this player.
+                        Box(modifier = Modifier.fillMaxWidth().height(36.dp)) {
+                            if (player.player.isVolumeSliderAccessible && player.player.currentVolume != null) {
+                                var currentVolume by remember(player.player.currentVolume) {
+                                    mutableStateOf(player.player.currentVolume)
+                                }
+                                val controlTint = colors.controlTint
+                                val volumeSliderColors = SliderDefaults.colors().copy(
+                                    thumbColor = controlTint,
+                                    activeTrackColor = controlTint,
+                                    inactiveTrackColor = controlTint.inactive(),
+                                )
+                                val isGroupBound = player.childrenBinds.any { it.isBound }
+                                val isGroupForGesture by rememberUpdatedState(isGroupBound)
+                                Row(
+                                    modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
-                                    Slider(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        value = currentVolume,
-                                        valueRange = 0f..100f,
-                                        onValueChange = {
-                                            currentVolume = it
+                                    Icon(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .alphaOn(player.player.canMute)
+                                            .clickable(enabled = player.player.canMute) {
+                                                playerAction(
+                                                    player,
+                                                    if (player.childrenBinds.none { it.isBound }) {
+                                                        PlayerAction.ToggleMute(player.player.currentMuteState)
+                                                    } else {
+                                                        PlayerAction.GroupToggleMute(player.player.currentMuteState)
+                                                    },
+                                                )
+                                            },
+                                        imageVector = if (player.player.currentMuteState) {
+                                            VolumeMutedIcon
+                                        } else {
+                                            VolumeIcon
                                         },
-                                        onValueChangeFinished = {
+                                        contentDescription = if (player.player.currentMuteState) {
+                                            stringResource(
+                                                Res.string.cd_unmute,
+                                            )
+                                        } else {
+                                            stringResource(Res.string.cd_mute)
+                                        },
+                                        tint = controlTint,
+                                    )
+                                    VolumeSliderBox(
+                                        modifier = Modifier.weight(1f),
+                                        hintColor = controlTint,
+                                        hintIconColor = MaterialTheme.colorScheme.background,
+                                        volume = { currentVolume },
+                                        onStepDown = {
                                             playerAction(
                                                 player,
-                                                if (player.childrenBinds.none { it.isBound }) {
-                                                    PlayerAction.VolumeSet(currentVolume.toDouble())
+                                                if (isGroupForGesture) {
+                                                    PlayerAction.GroupVolumeDown
                                                 } else {
-                                                    PlayerAction.GroupVolumeSet(currentVolume.toDouble())
+                                                    PlayerAction.VolumeDown
                                                 },
                                             )
                                         },
-                                        thumb = {
-                                            SliderDefaults.Thumb(
-                                                interactionSource = remember { MutableInteractionSource() },
-                                                thumbSize = DpSize(16.dp, 16.dp),
-                                                colors = volumeSliderColors,
+                                        onStepUp = {
+                                            playerAction(
+                                                player,
+                                                if (isGroupForGesture) {
+                                                    PlayerAction.GroupVolumeUp
+                                                } else {
+                                                    PlayerAction.VolumeUp
+                                                },
                                             )
                                         },
-                                        track = { sliderState ->
-                                            SliderDefaults.Track(
-                                                sliderState = sliderState,
-                                                colors = volumeSliderColors,
-                                                thumbTrackGapSize = 0.dp,
-                                                trackInsideCornerSize = 0.dp,
-                                                drawStopIndicator = null,
-                                                // Square inside corners leave 0 % and 100 % with a square end.
-                                                modifier = Modifier.height(4.dp).clip(CircleShape),
-                                            )
-                                        },
+                                    ) {
+                                        Slider(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            value = currentVolume,
+                                            valueRange = 0f..100f,
+                                            onValueChange = {
+                                                currentVolume = it
+                                            },
+                                            onValueChangeFinished = {
+                                                playerAction(
+                                                    player,
+                                                    if (player.childrenBinds.none { it.isBound }) {
+                                                        PlayerAction.VolumeSet(currentVolume.toDouble())
+                                                    } else {
+                                                        PlayerAction.GroupVolumeSet(currentVolume.toDouble())
+                                                    },
+                                                )
+                                            },
+                                            thumb = {
+                                                SliderDefaults.Thumb(
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    thumbSize = DpSize(16.dp, 16.dp),
+                                                    colors = volumeSliderColors,
+                                                )
+                                            },
+                                            track = { sliderState ->
+                                                SliderDefaults.Track(
+                                                    sliderState = sliderState,
+                                                    colors = volumeSliderColors,
+                                                    thumbTrackGapSize = 0.dp,
+                                                    trackInsideCornerSize = 0.dp,
+                                                    drawStopIndicator = null,
+                                                    // Square inside corners leave 0 % and 100 % with a square end.
+                                                    modifier = Modifier.height(4.dp).clip(CircleShape),
+                                                )
+                                            },
+                                        )
+                                    }
+                                    VolumeValue(
+                                        volume = currentVolume.roundToInt(),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = controlTint,
                                     )
                                 }
-                                VolumeValue(
-                                    volume = currentVolume.roundToInt(),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = controlTint,
-                                )
                             }
                         }
-                    }
-
-                    Spacer(modifier = Modifier.fillMaxWidth().height(8.dp))
-
-                    if (!showSideQueue) {
-                        CollapsibleQueue(
-                            onAddToPlaylist = onAddToPlaylist,
-                            onStartEndlessMix = onStartEndlessMix,
-                            modifier = Modifier
-                                .conditional(
-                                    condition = isQueueExpanded,
-                                    ifTrue = {
-                                        weight(1f).nestedScroll(queueCollapseNestedScroll)
-                                    },
-                                    ifFalse = { wrapContentHeight() },
-                                ),
-                            queue = player.queue,
-                            isQueueExpanded = isQueueExpanded,
-                            onQueueExpandedSwitch = { onExpandQueue(!isQueueExpanded) },
-                            onGoToLibrary = onClose,
-                            queueAction = queueAction,
-                            tint = colors.controlTint,
-                            isCurrentPage = isCurrentPage,
-                            contentPadding = contentPadding,
-                            livePositionFlow = livePositionFlow,
-                            onChapterClick = { chapter ->
-                                playerAction(player, PlayerAction.SeekTo(chapterSeekSeconds(chapter.start)))
-                            },
-                        )
-                    }
+    
+                        Spacer(modifier = Modifier.fillMaxWidth().height(8.dp))
+    
+                        if (!showSideQueue) {
+                            CollapsibleQueue(
+                                onAddToPlaylist = onAddToPlaylist,
+                                onStartEndlessMix = onStartEndlessMix,
+                                modifier = Modifier
+                                    .conditional(
+                                        condition = isQueueExpanded,
+                                        ifTrue = {
+                                            weight(1f).nestedScroll(queueCollapseNestedScroll)
+                                        },
+                                        ifFalse = { wrapContentHeight() },
+                                    ),
+                                queue = player.queue,
+                                isQueueExpanded = isQueueExpanded,
+                                onQueueExpandedSwitch = { onExpandQueue(!isQueueExpanded) },
+                                onGoToLibrary = onClose,
+                                queueAction = queueAction,
+                                tint = colors.controlTint,
+                                isCurrentPage = isCurrentPage,
+                                contentPadding = contentPadding,
+                                livePositionFlow = livePositionFlow,
+                                onChapterClick = { chapter ->
+                                    playerAction(player, PlayerAction.SeekTo(chapterSeekSeconds(chapter.start)))
+                                },
+                            )
+                        }
+                        }
                     if (showSideQueue) {
                         Spacer(
                             modifier = Modifier.fillMaxWidth()
