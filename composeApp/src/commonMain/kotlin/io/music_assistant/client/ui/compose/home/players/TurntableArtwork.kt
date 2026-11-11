@@ -3,10 +3,10 @@ package io.music_assistant.client.ui.compose.home.players
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
@@ -19,10 +19,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
@@ -138,12 +142,11 @@ internal fun TurntableArtwork(
                         modifier = Modifier.fillMaxSize(),
                     )
                 } else {
-                    Canvas(Modifier.fillMaxSize()) { drawCircle(color) }
-                    Icon(
-                        icon,
+                    Image(
+                        painter = placeholder,
                         contentDescription = title,
-                        tint = iconColor,
-                        modifier = Modifier.fillMaxSize(0.48f),
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
                     )
                 }
                 Canvas(Modifier.fillMaxSize()) {
@@ -152,24 +155,66 @@ internal fun TurntableArtwork(
             }
         }
         Canvas(Modifier.fillMaxSize()) {
-            val pivot = Offset(size.width * 0.89f, size.height * 0.10f)
-            // Resting stylus is outside the record; move smoothly onto its grooves.
-            val restElbow = Offset(size.width * 0.99f, size.height * 0.43f)
-            val playElbow = Offset(size.width * 0.92f, size.height * 0.39f)
-            val restTip = Offset(size.width * 0.95f, size.height * 0.51f)
-            val playTip = Offset(size.width * 0.79f, size.height * 0.50f)
+            // UGREEN reference: ivory curved tonearm with a small light cartridge,
+            // anchored above/right of the record. Keep the arm stationary while
+            // the vinyl artwork rotates beneath it.
+            val scale = size.minDimension
+            val pivot = Offset(size.width * 0.86f, size.height * 0.055f)
+            val restingBend = Offset(size.width * 0.977f, size.height * 0.405f)
+            val playingBend = Offset(size.width * 0.845f, size.height * 0.385f)
+            val restingTip = Offset(size.width * 0.943f, size.height * 0.487f)
+            val playingTip = Offset(size.width * 0.765f, size.height * 0.482f)
             fun between(a: Offset, b: Offset) = Offset(
                 a.x + (b.x - a.x) * armProgress,
                 a.y + (b.y - a.y) * armProgress,
             )
-            val elbow = between(restElbow, playElbow)
-            val tip = between(restTip, playTip)
-            drawCircle(Color(0xFF8A929F), radius = size.minDimension * 0.052f, center = pivot)
-            drawCircle(Color(0xFFD6DCE3), radius = size.minDimension * 0.029f, center = pivot)
-            drawLine(Color(0xFF222833), pivot, elbow, strokeWidth = size.minDimension * 0.036f, cap = StrokeCap.Round)
-            drawLine(Color(0xFFCDD2D9), pivot, elbow, strokeWidth = size.minDimension * 0.023f, cap = StrokeCap.Round)
-            drawLine(Color(0xFFCDD2D9), elbow, tip, strokeWidth = size.minDimension * 0.022f, cap = StrokeCap.Round)
-            drawCircle(Color(0xFF292E39), radius = size.minDimension * 0.027f, center = tip)
+            val bend = between(restingBend, playingBend)
+            val tip = between(restingTip, playingTip)
+            val armPath = Path().apply {
+                moveTo(pivot.x + scale * 0.008f, pivot.y + scale * 0.025f)
+                lineTo(bend.x - scale * 0.019f, bend.y - scale * 0.055f)
+                quadraticBezierTo(
+                    bend.x + scale * 0.008f, bend.y - scale * 0.012f,
+                    bend.x, bend.y + scale * 0.018f,
+                )
+                lineTo(tip.x, tip.y)
+            }
+            // Soft grey edge gives the light, rounded rod enough depth on
+            // both pale and dark album-derived backgrounds.
+            drawPath(
+                armPath,
+                color = Color(0xFF9BA7AA),
+                style = Stroke(width = scale * 0.027f, cap = StrokeCap.Round),
+            )
+            drawPath(
+                armPath,
+                color = Color(0xFFF0F1EF),
+                style = Stroke(width = scale * 0.021f, cap = StrokeCap.Round),
+            )
+            drawPath(
+                armPath,
+                color = Color(0xFFFFFFFF).copy(alpha = 0.47f),
+                style = Stroke(width = scale * 0.006f, cap = StrokeCap.Round),
+            )
+            // Rounded, light pickup head: no black ball or sharp elbow.
+            rotate(degrees = -24f - armProgress * 15f, pivot = tip) {
+                drawRoundRect(
+                    color = Color(0xFF9AA6A9),
+                    topLeft = Offset(tip.x - scale * 0.019f, tip.y - scale * 0.008f),
+                    size = Size(scale * 0.043f, scale * 0.085f),
+                    cornerRadius = CornerRadius(scale * 0.007f),
+                )
+                drawRoundRect(
+                    color = Color(0xFFE9EBE9),
+                    topLeft = Offset(tip.x - scale * 0.019f, tip.y - scale * 0.012f),
+                    size = Size(scale * 0.038f, scale * 0.080f),
+                    cornerRadius = CornerRadius(scale * 0.007f),
+                )
+            }
+            drawCircle(Color(0xFF9EA9AC), radius = scale * 0.043f, center = pivot)
+            drawCircle(Color(0xFFE1E6E7), radius = scale * 0.036f, center = pivot)
+            drawCircle(Color(0xFFBCC7C9), radius = scale * 0.025f, center = pivot)
+            drawCircle(Color(0xFFD6DCDD), radius = scale * 0.020f, center = pivot)
         }
     }
 }
