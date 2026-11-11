@@ -345,6 +345,7 @@ fun FullPlayerItem(
     navigateToItem: (AppMediaItem) -> Unit = {},
     // The chooser for a multi-artist track lives in the dialog host, outside the pager.
     onChooseArtist: () -> Unit = {},
+    trackSwipeDirection: Float = 1f,
 ) {
     val currentMedia = item.player.currentMedia
     val turntableEnabled by koinInject<SettingsRepository>().turntableEnabled.collectAsStateWithLifecycle()
@@ -355,11 +356,10 @@ fun FullPlayerItem(
     // Keep seek, transport, volume and other output-device controls stationary.
     val trackEnter = remember { Animatable(0f) }
     var previousMediaKey by remember { mutableStateOf<String?>(null) }
-    var enterDirection by remember { mutableStateOf(1f) }
     val mediaKey = currentMedia?.let { "${it.title}|${it.subtitle}|${it.imageUrl}" }
     LaunchedEffect(mediaKey) {
         if (mediaKey != null && previousMediaKey != null && mediaKey != previousMediaKey) {
-            trackEnter.snapTo(240f * enterDirection)
+            trackEnter.snapTo(240f * trackSwipeDirection)
             trackEnter.animateTo(0f, tween(durationMillis = 320))
         }
         previousMediaKey = mediaKey
