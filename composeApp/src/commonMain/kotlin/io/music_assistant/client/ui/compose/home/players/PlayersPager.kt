@@ -12,7 +12,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -649,12 +648,9 @@ private fun ExpandedPlayerPage(
     // then split the width 2:1, so the layout degrades smoothly from a large
     // tablet down to a phone in landscape.
     val showSideQueue = WindowClass.isWide()
-    var trackSwipeDirection by remember { mutableStateOf(1f) }
-    val trackSwipeThresholdPx = with(LocalDensity.current) { 72.dp.toPx() }
     val onTrackSwipe: (Float) -> Unit = { delta ->
         if (!isQueueExpanded && !showSideQueue && player.queueInfo?.currentItem != null) {
             val action = if (delta < 0f) PlayerAction.Next else PlayerAction.Previous
-            trackSwipeDirection = if (delta < 0f) 1f else -1f
             playerAction(player, action)
         }
     }
@@ -877,44 +873,15 @@ private fun ExpandedPlayerPage(
                                 chapterProgressEnabled = chapterProgressEnabled,
                                 navigateToItem = navigateAndClose,
                                 onChooseArtist = onChooseArtist,
-                                trackSwipeDirection = trackSwipeDirection,
                             )
                         }
                     }
 
-                    // Only the lower zone (below transport, through the queue button)
-                    // handles track changes. Child volume Slider retains its own gesture.
-                    val currentTrackSwipe by rememberUpdatedState(onTrackSwipe)
+                    // Queue-button-only gestures are handled by CollapsibleQueue.
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .conditional(isQueueExpanded) { weight(1f) }
-                            .pointerInput(player.playerId, isQueueExpanded, trackSwipeThresholdPx) {
-                                var horizontalDelta = 0f
-                                var inVolumeControls = false
-                                detectHorizontalDragGestures(
-                                    onDragStart = { start ->
-                                        horizontalDelta = 0f
-                                        // Preserve volume slider interaction; swipe starts on
-                                        // the area around/below it or on the queue button.
-                                        inVolumeControls = start.y < 36.dp.toPx()
-                                    },
-                                    onHorizontalDrag = { change, delta ->
-                                        if (!inVolumeControls && !isQueueExpanded) {
-                                            horizontalDelta += delta
-                                            change.consume()
-                                        }
-                                    },
-                                    onDragEnd = {
-                                        if (!inVolumeControls &&
-                                            kotlin.math.abs(horizontalDelta) >= trackSwipeThresholdPx) {
-                                            currentTrackSwipe(horizontalDelta)
-                                        }
-                                        horizontalDelta = 0f
-                                    },
-                                    onDragCancel = { horizontalDelta = 0f },
-                                )
-                            },
+                            .conditional(isQueueExpanded) { weight(1f) },
                     ) {
                         // Fixed-height shell keeps album art space consistent whether
                         // the volume control is shown for this player.
@@ -1053,6 +1020,7 @@ private fun ExpandedPlayerPage(
                                 queue = player.queue,
                                 isQueueExpanded = isQueueExpanded,
                                 onQueueExpandedSwitch = { onExpandQueue(!isQueueExpanded) },
+                                onTrackSwipe = onTrackSwipe.takeIf { !isQueueExpanded && !showSideQueue },
                                 onGoToLibrary = onClose,
                                 queueAction = queueAction,
                                 tint = colors.controlTint,
