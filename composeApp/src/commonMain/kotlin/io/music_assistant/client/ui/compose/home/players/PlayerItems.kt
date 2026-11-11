@@ -139,7 +139,6 @@ fun CompactPlayerItem(
     onGroup: (() -> Unit)? = null,
 ) {
     val currentMedia = item.player.currentMedia
-    val turntableEnabled by koinInject<SettingsRepository>().turntableEnabled.collectAsStateWithLifecycle()
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
     // Derived so the position tick recomposes this item only at chapter boundaries.
     val positionState = livePositionFlow
@@ -345,6 +344,7 @@ fun FullPlayerItem(
     onChooseArtist: () -> Unit = {},
 ) {
     val currentMedia = item.player.currentMedia
+    val turntableEnabled by koinInject<SettingsRepository>().turntableEnabled.collectAsStateWithLifecycle()
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
     val controlTint = colors.controlTint
 
