@@ -410,14 +410,6 @@ fun FullPlayerItem(
                     playing = item.player.isPlaying,
                     color = colors.dominant,
                     iconColor = onPrimaryContainer,
-                    onPrevious = {
-                        enterDirection = -1f
-                        playerAction(item, PlayerAction.Previous)
-                    },
-                    onNext = {
-                        enterDirection = 1f
-                        playerAction(item, PlayerAction.Next)
-                    },
                 )
             } else {
                 currentMedia?.imageUrl?.let {
