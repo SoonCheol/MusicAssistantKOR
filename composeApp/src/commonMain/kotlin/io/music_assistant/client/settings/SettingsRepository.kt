@@ -99,6 +99,15 @@ class SettingsRepository(
         _theme.update { theme }
     }
 
+    // KOR-only visual player mode; no changes to playback or server data.
+    private val _turntableEnabled = MutableStateFlow(settings.getBoolean("kor_turntable_enabled", true))
+    val turntableEnabled = _turntableEnabled.asStateFlow()
+
+    fun setTurntableEnabled(enabled: Boolean) {
+        settings.putBoolean("kor_turntable_enabled", enabled)
+        _turntableEnabled.update { enabled }
+    }
+
     private val _accentColor = MutableStateFlow(
         settings.getStringOrNull("accent_color").let { stored ->
             AccentColor.entries.firstOrNull { it.name == stored } ?: AccentColor.DEFAULT

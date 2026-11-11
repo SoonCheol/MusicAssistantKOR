@@ -87,6 +87,8 @@ import io.music_assistant.client.ui.compose.common.icons.AlbumIcon
 import io.music_assistant.client.ui.compose.common.icons.TrackIcon
 import io.music_assistant.client.ui.compose.common.items.artistNavigation
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
+import io.music_assistant.client.settings.SettingsRepository
+import org.koin.compose.koinInject
 import io.music_assistant.client.ui.inactive
 import io.music_assistant.client.ui.utils.LocalDeviceChrome
 import io.music_assistant.client.ui.utils.fadingEdges
@@ -137,6 +139,7 @@ fun CompactPlayerItem(
     onGroup: (() -> Unit)? = null,
 ) {
     val currentMedia = item.player.currentMedia
+    val turntableEnabled by koinInject<SettingsRepository>().turntableEnabled.collectAsStateWithLifecycle()
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
     // Derived so the position tick recomposes this item only at chapter boundaries.
     val positionState = livePositionFlow
@@ -374,28 +377,41 @@ fun FullPlayerItem(
                 .background(colors.dominant.alphaOn(currentMedia != null)),
             contentAlignment = Alignment.Center,
         ) {
-            currentMedia?.imageUrl?.let {
-                val placeholder =
-                    rememberPlaceholderPainter(
-                        backgroundColor = colors.dominant,
-                        iconColor = onPrimaryContainer,
-                        icon = currentMedia.defaultIcon,
-                    )
-                AsyncImage(
-                    placeholder = placeholder,
-                    fallback = placeholder,
-                    error = placeholder,
-                    model = rememberArtworkRequest(it),
-                    contentDescription = currentMedia.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
+            if (turntableEnabled && currentMedia != null) {
+                TurntableArtwork(
+                    imageUrl = currentMedia.imageUrl,
+                    title = currentMedia.title,
+                    icon = currentMedia.defaultIcon,
+                    playing = item.player.isPlaying,
+                    color = colors.dominant,
+                    iconColor = onPrimaryContainer,
+                    onPrevious = { playerAction(item, PlayerAction.Previous) },
+                    onNext = { playerAction(item, PlayerAction.Next) },
                 )
-            } ?: Icon(
-                imageVector = currentMedia?.defaultIcon ?: AlbumIcon,
-                contentDescription = null,
-                modifier = Modifier.size(120.dp),
-                tint = onPrimaryContainer,
-            )
+            } else {
+                currentMedia?.imageUrl?.let {
+                    val placeholder =
+                        rememberPlaceholderPainter(
+                            backgroundColor = colors.dominant,
+                            iconColor = onPrimaryContainer,
+                            icon = currentMedia.defaultIcon,
+                        )
+                    AsyncImage(
+                        placeholder = placeholder,
+                        fallback = placeholder,
+                        error = placeholder,
+                        model = rememberArtworkRequest(it),
+                        contentDescription = currentMedia.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } ?: Icon(
+                    imageVector = currentMedia?.defaultIcon ?: AlbumIcon,
+                    contentDescription = null,
+                    modifier = Modifier.size(120.dp),
+                    tint = onPrimaryContainer,
+                )
+            }
         }
 
         // Track info

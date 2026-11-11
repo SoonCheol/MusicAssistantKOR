@@ -168,6 +168,9 @@ class SettingsViewModel(
         }
     }
 
+    val turntableEnabled = settings.turntableEnabled
+    fun setTurntableEnabled(enabled: Boolean) = settings.setTurntableEnabled(enabled)
+
     val homeRowStyles = settings.homeRowStyles
     val homeRowDefaultStyles = settings.homeRowDefaultStyles
     val homeRowLabels = settings.homeRowLabels

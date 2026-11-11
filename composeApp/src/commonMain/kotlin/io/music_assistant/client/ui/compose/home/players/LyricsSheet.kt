@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -140,7 +141,19 @@ fun LyricsPanel(
     val toastState = rememberToastState()
     val screenWakeOnMessage = stringResource(Res.string.lyrics_screen_wake_on)
 
-    Box(modifier = modifier) {
+    // KOR lyrics presentation: understated tonal gradient without altering sync,
+    // scrolling, offset, font controls or the existing lyrics button.
+    Box(
+        modifier = modifier.background(
+            Brush.verticalGradient(
+                listOf(
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.44f),
+                    MaterialTheme.colorScheme.surfaceContainerHigh,
+                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.24f),
+                ),
+            ),
+        ),
+    ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Scoped to the sheet: leaving the composition releases the screen lock,
             // whichever way the sheet was closed.
