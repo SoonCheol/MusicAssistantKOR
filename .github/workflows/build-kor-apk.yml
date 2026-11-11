@@ -99,6 +99,7 @@ jobs:
         run: |
           set -euo pipefail
           ./gradlew :androidApp:assembleRelease -PkorBuildNumber=${{ steps.metadata.outputs.version_code }} --no-daemon
+          mkdir -p dist
           mapfile -t apks < <(find androidApp/build/outputs/apk/release -maxdepth 1 -name '*.apk' ! -name '*unsigned*' -type f)
           if [[ ${#apks[@]} -ne 1 ]]; then
             printf 'Expected one signed release APK; found %s\n' "${#apks[@]}" >&2
