@@ -42,6 +42,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -402,6 +403,8 @@ fun SettingsScreen(goHome: () -> Unit, exitApp: () -> Unit) {
                     onChange = themeViewModel::setAccentColor,
                 )
 
+                RecommendationDisplaySection(viewModel)
+
                 // Misc settings - always visible
                 val shareLogsTitle = stringResource(Res.string.settings_share_logs)
                 val shareCrashLogsTitle = stringResource(Res.string.settings_share_crash_logs)
@@ -418,6 +421,51 @@ fun SettingsScreen(goHome: () -> Unit, exitApp: () -> Unit) {
                 )
 
                 Spacer(modifier = Modifier.size(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecommendationDisplaySection(viewModel: SettingsViewModel) {
+    var expanded by remember { mutableStateOf(false) }
+    val labels by viewModel.homeRowLabels.collectAsStateWithLifecycle()
+    val styles by viewModel.homeRowStyles.collectAsStateWithLifecycle()
+    SectionCard {
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("추천 화면 표시 옵션", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "항목별 큰 썸네일 / 작은 썸네일",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(if (expanded) "▲" else "▼")
+        }
+        if (expanded) {
+            Spacer(Modifier.size(12.dp))
+            if (labels.isEmpty()) {
+                Text("추천 화면을 먼저 열면 항목 목록이 표시됩니다.")
+            }
+            labels.forEach { (id, title) ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(title, modifier = Modifier.weight(1f), maxLines = 2)
+                    val compact = styles[id] == true
+                    TextButton(onClick = { viewModel.setHomeRowCompact(id, false) }) {
+                        Text("크게", color = if (!compact) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    TextButton(onClick = { viewModel.setHomeRowCompact(id, true) }) {
+                        Text("작게", color = if (compact) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
             }
         }
     }
