@@ -884,20 +884,31 @@ private fun ExpandedPlayerPage(
 
                     // Only the lower zone (below transport, through the queue button)
                     // handles track changes. Child volume Slider retains its own gesture.
+                    val currentTrackSwipe by rememberUpdatedState(onTrackSwipe)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .conditional(isQueueExpanded) { weight(1f) }
                             .pointerInput(player.playerId, isQueueExpanded, trackSwipeThresholdPx) {
                                 var horizontalDelta = 0f
+                                var inVolumeControls = false
                                 detectHorizontalDragGestures(
-                                    onDragStart = { horizontalDelta = 0f },
+                                    onDragStart = { start ->
+                                        horizontalDelta = 0f
+                                        // Preserve volume slider interaction; swipe starts on
+                                        // the area around/below it or on the queue button.
+                                        inVolumeControls = start.y < 36.dp.toPx()
+                                    },
                                     onHorizontalDrag = { change, delta ->
-                                        horizontalDelta += delta
-                                        change.consume()
+                                        if (!inVolumeControls && !isQueueExpanded) {
+                                            horizontalDelta += delta
+                                            change.consume()
+                                        }
                                     },
                                     onDragEnd = {
-                                        if (kotlin.math.abs(horizontalDelta) >= trackSwipeThresholdPx) {
-                                            onTrackSwipe(horizontalDelta)
+                                        if (!inVolumeControls &&
+                                            kotlin.math.abs(horizontalDelta) >= trackSwipeThresholdPx) {
+                                            currentTrackSwipe(horizontalDelta)
                                         }
                                         horizontalDelta = 0f
                                     },
