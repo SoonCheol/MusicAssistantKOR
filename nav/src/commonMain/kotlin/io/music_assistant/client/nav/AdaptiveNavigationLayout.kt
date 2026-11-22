@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
@@ -265,7 +266,7 @@ private fun BarWithDrawerLayout(
                     editState = editState,
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 SidebarSections(
                     sections = sections,
@@ -396,7 +397,10 @@ private fun SidebarSections(
     ) {
         sections.forEachIndexed { index, section ->
             if (index != 0) {
-                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
+                )
             }
 
             SectionTitle(section.title)
@@ -446,6 +450,7 @@ private fun SidebarItem(
     dragHandle: @Composable () -> Unit = {},
 ) {
     NavigationDrawerItem(
+        modifier = Modifier.height(48.dp),
         label = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -480,8 +485,9 @@ private fun SidebarItem(
 private fun SectionTitle(title: String) {
     Text(
         title,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 
