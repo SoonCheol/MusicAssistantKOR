@@ -440,39 +440,46 @@ fun Queue(
                                             )
                                             .fillMaxWidth()
                                             .clip(shape = RoundedCornerShape(8.dp))
-                                            .conditional(
-                                                condition = isPlayed,  // Treat unplayable like played items
-                                                ifTrue = {
-                                                    clickable(isPlayable) {  // Only clickable if playable
-                                                        queueAction(
-                                                            QueueAction.PlayQueueItem(
-                                                                queueData.info.id, item.id,
-                                                            ),
-                                                        )
-                                                    }
-                                                },
-                                                ifFalse = {
-                                                    combinedClickable(
-                                                        onClick = {
-                                                            if (!isCurrent && isPlayable) {
-                                                                queueAction(
-                                                                    QueueAction.PlayQueueItem(
-                                                                        queueData.info.id,
-                                                                        item.id,
-                                                                    ),
-                                                                )
-                                                            }
-                                                        },
-                                                        onLongClick = {
-                                                            menuItemId = item.id
-                                                        },
-                                                    )
-                                                },
-                                            )
                                             .padding(horizontal = 12.dp, vertical = 2.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.Start,
                                     ) {
+                                        // Separate track interactions from the drag handle.
+                                        Row(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .conditional(
+                                                    condition = isPlayed,  // Treat unplayable like played items
+                                                    ifTrue = {
+                                                        clickable(isPlayable) {  // Only clickable if playable
+                                                            queueAction(
+                                                                QueueAction.PlayQueueItem(
+                                                                    queueData.info.id, item.id,
+                                                                ),
+                                                            )
+                                                        }
+                                                    },
+                                                    ifFalse = {
+                                                        combinedClickable(
+                                                            onClick = {
+                                                                if (!isCurrent && isPlayable) {
+                                                                    queueAction(
+                                                                        QueueAction.PlayQueueItem(
+                                                                            queueData.info.id,
+                                                                            item.id,
+                                                                        ),
+                                                                    )
+                                                                }
+                                                            },
+                                                            onLongClick = {
+                                                                menuItemId = item.id
+                                                            },
+                                                        )
+                                                    },
+                                                )
+                                                .padding(vertical = 2.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
                                         val placeholder = rememberPlaceholderPainter(
                                             backgroundColor = MaterialTheme.colorScheme.background,
                                             iconColor = MaterialTheme.colorScheme.secondary,
@@ -527,9 +534,11 @@ fun Queue(
                                                 style = MaterialTheme.typography.bodySmall,
                                             )
                                         }
+                                        }
                                         if (!isCurrent && !isPlayed && isPlayable) {
-                                            Icon(
+                                            Box(
                                                 modifier = Modifier
+                                                    .size(48.dp)
                                                     .draggableHandle(
                                                         onDragStopped = {
                                                             val from = dragStartIndex
@@ -548,11 +557,16 @@ fun Queue(
                                                             dragEndIndex = null
                                                         },
                                                     )
-                                                    .size(16.dp),
-                                                imageVector = TablerIcons.GripVertical,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.secondary,
-                                            )
+                                                ,
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                Icon(
+                                                    modifier = Modifier.size(16.dp),
+                                                    imageVector = TablerIcons.GripVertical,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.secondary,
+                                                )
+                                            }
                                         }
                                     }
 
