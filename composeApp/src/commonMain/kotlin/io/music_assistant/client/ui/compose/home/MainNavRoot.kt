@@ -679,6 +679,17 @@ private fun mainNavEntryProvider(
             BrowseScreen(
                 browseViewModel = browseViewModel,
                 title = browse.title,
+                currentFolder = if (browse.folderId != null && browse.folderProvider != null && browse.folderUri != null) {
+                    RecommendationFolder(
+                        itemId = browse.folderId,
+                        provider = browse.folderProvider,
+                        name = browse.title.orEmpty(),
+                        uri = browse.folderUri,
+                        images = emptyMap(),
+                        path = browse.path,
+                        isPlayable = browse.folderPlayable,
+                    )
+                } else null,
                 contentPadding = contentPadding,
                 actionsViewModel = actionsViewModel,
                 onBack = { multiBackStack.removeLastOrNull() },
@@ -694,6 +705,10 @@ private fun mainNavEntryProvider(
                                     MainNav.Browse(
                                         path = item.path ?: item.uri,
                                         title = item.displayName,
+                                        folderId = item.itemId,
+                                        folderProvider = item.provider,
+                                        folderUri = item.mediaUri,
+                                        folderPlayable = item.isPlayable,
                                     ),
                                 )
                             }
@@ -859,6 +874,10 @@ private sealed interface MainNav : NavKey {
     data class Browse(
         val path: String?,
         val title: String?,
+        val folderId: String? = null,
+        val folderProvider: String? = null,
+        val folderUri: String? = null,
+        val folderPlayable: Boolean = false,
         val stackingId: String = Uuid.generateV4().toString(),
     ) : MainNav
 
