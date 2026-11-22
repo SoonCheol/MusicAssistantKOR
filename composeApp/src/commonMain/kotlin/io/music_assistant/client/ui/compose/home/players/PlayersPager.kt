@@ -45,7 +45,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -717,8 +717,8 @@ private fun ExpandedPlayerPage(
                 start = {
                     IconButton(onClick = onClose) {
                         Icon(
-                            Icons.Default.ExpandMore,
-                            "Collapse",
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            "Collapse player",
                             modifier = Modifier.size(32.dp),
                         )
                     }
