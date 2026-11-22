@@ -1,4 +1,5 @@
 // Compose layout values (sizes, alphas, animation durations) are visual design tokens.
+// KOR build refresh: retain the expanded player's back-arrow collapse control.
 @file:Suppress("MagicNumber")
 
 package io.music_assistant.client.ui.compose.home.players
