@@ -22,9 +22,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.music_assistant.client.data.model.client.ClickContext
 import io.music_assistant.client.data.model.client.items.AppMediaItem
+import io.music_assistant.client.data.model.client.items.RecommendationFolder
 import io.music_assistant.client.settings.ViewMode
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.ToastHost
+import io.music_assistant.client.ui.compose.common.items.FolderTitleWithMenu
 import io.music_assistant.client.ui.compose.common.items.ProvideClickActions
 import io.music_assistant.client.ui.compose.common.rememberToastState
 import io.music_assistant.client.ui.compose.common.viewmodel.ActionsViewModel
@@ -46,6 +48,7 @@ import org.jetbrains.compose.resources.stringResource
 fun BrowseScreen(
     browseViewModel: BrowseViewModel,
     title: String?,
+    currentFolder: RecommendationFolder?,
     contentPadding: PaddingValues,
     actionsViewModel: ActionsViewModel,
     onNavigateClick: (AppMediaItem) -> Unit,
@@ -61,7 +64,19 @@ fun BrowseScreen(
     TopBarLayout(
         topBar = {
             TopAppBar(
-                title = { Text(title ?: stringResource(Res.string.nav_browse)) },
+                title = {
+                    if (currentFolder != null) {
+                        ProvideClickActions(ClickContext.BROWSE) {
+                            FolderTitleWithMenu(
+                                item = currentFolder,
+                                onPlayOption = browseViewModel::onPlayClick,
+                                libraryActions = actionsViewModel,
+                            )
+                        }
+                    } else {
+                        Text(title ?: stringResource(Res.string.nav_browse))
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
