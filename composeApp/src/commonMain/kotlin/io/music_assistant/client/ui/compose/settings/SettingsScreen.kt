@@ -1,5 +1,15 @@
 package io.music_assistant.client.ui.compose.settings
 
+import io.ktor.client.HttpClient
+import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpHeaders
+import io.ktor.client.request.header
+import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -639,24 +649,96 @@ internal fun SectionTitle(text: String) {
     )
 }
 
+private sealed interface KorUpdateState {
+    data object Checking : KorUpdateState
+    data object Failed : KorUpdateState
+    data class Ready(val version: String, val build: Long, val apkUrl: String) : KorUpdateState
+}
+
+private suspend fun fetchKorRelease(): KorUpdateState {
+    return try {
+        withTimeout(10_000L) {
+            val client = HttpClient()
+            try {
+                val response = client.get("https://api.github.com/repos/SoonCheol/MusicAssistantKOR/releases/latest") {
+                    header(HttpHeaders.Accept, "application/vnd.github+json")
+                    header(HttpHeaders.UserAgent, "MusicAssistantKOR")
+                }
+                if (response.status.value != 200) return@withTimeout KorUpdateState.Failed
+                val json = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+                // The signed release workflow publishes tags such as v0.17.0-kor.39.
+                val tag = json["tag_name"]?.jsonPrimitive?.content ?: return@withTimeout KorUpdateState.Failed
+                val match = Regex("^v?(\\d+\\.\\d+\\.\\d+)-kor\\.(\\d+)$").matchEntire(tag)
+                    ?: return@withTimeout KorUpdateState.Failed
+                val apk = json["assets"]?.jsonArray?.firstOrNull { asset ->
+                    asset.jsonObject["name"]?.jsonPrimitive?.content?.endsWith("-arm64.apk") == true
+                }?.jsonObject?.get("browser_download_url")?.jsonPrimitive?.content
+                    ?: return@withTimeout KorUpdateState.Failed
+                KorUpdateState.Ready(match.groupValues[1], match.groupValues[2].toLong(), apk)
+            } finally {
+                client.close()
+            }
+        }
+    } catch (_: Exception) {
+        KorUpdateState.Failed
+    }
+}
+
+private fun isKorUpdateAvailable(installed: AppVersion, release: KorUpdateState.Ready): Boolean {
+    val installedParts = installed.name.split('.').map { it.toIntOrNull() }
+    val releaseParts = release.version.split('.').map { it.toIntOrNull() }
+    if (installedParts.size != 3 || releaseParts.size != 3 ||
+        installedParts.any { it == null } || releaseParts.any { it == null }) return false
+    for (i in 0..2) {
+        val comparison = releaseParts[i]!!.compareTo(installedParts[i]!!)
+        if (comparison != 0) return comparison > 0
+    }
+    return release.build > (installed.code.toLongOrNull() ?: return false)
+}
+
 @Composable
 private fun AppVersionSection(appVersion: AppVersion) {
     val uriHandler = LocalUriHandler.current
+    var refreshKey by remember { mutableStateOf(0) }
+    var updateState by remember { mutableStateOf<KorUpdateState>(KorUpdateState.Checking) }
+    LaunchedEffect(refreshKey) {
+        updateState = KorUpdateState.Checking
+        updateState = fetchKorRelease()
+    }
     SectionCard {
         Text(
-            text = stringResource(Res.string.settings_app_version_info, appVersion.name, appVersion.code),
+            text = "현재 버전 ${appVersion.name} (빌드 ${appVersion.code})",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+        )
+        Spacer(modifier = Modifier.size(4.dp))
+        val release = updateState as? KorUpdateState.Ready
+        Text(
+            text = if (release != null) "최신 버전 ${release.version} (빌드 ${release.build})"
+                   else "최신 버전 확인 중 또는 확인 불가",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
         )
         Spacer(modifier = Modifier.size(8.dp))
+        val available = release != null && isKorUpdateAvailable(appVersion, release)
         Text(
-            text = "Music Assistant KOR 최신 버전 다운로드",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.clickable {
-                uriHandler.openUri("https://github.com/SoonCheol/MusicAssistantKOR/releases/latest")
+            text = when {
+                updateState is KorUpdateState.Checking -> "업데이트 확인 중…"
+                updateState is KorUpdateState.Failed -> "업데이트 확인 실패"
+                available -> "새 버전이 있습니다"
+                else -> "최신 버전입니다"
             },
+            style = MaterialTheme.typography.bodyMedium,
         )
+        Spacer(modifier = Modifier.size(8.dp))
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            enabled = available,
+            onClick = { release?.let { uriHandler.openUri(it.apkUrl) } },
+        ) { Text("업데이트") }
+        if (updateState is KorUpdateState.Failed) {
+            TextButton(onClick = { refreshKey++ }) { Text("다시 확인") }
+        }
         Spacer(modifier = Modifier.size(4.dp))
         Text(
             text = stringResource(Res.string.settings_app_documentation),
