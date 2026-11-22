@@ -14,7 +14,7 @@
   <string name="action_add_all_to_queue">모두 재생 대기열에 추가</string>
   <string name="action_add_to_library">라이브러리에 추가</string>
   <string name="action_add_to_playlist">재생목록에 추가</string>
-  <string name="action_add_to_queue">재생 대기열에 추가</string>
+  <string name="action_add_to_queue">대기열 뒤에 추가</string>
   <string name="action_browse">폴더 탐색</string>
   <string name="action_choose_artist">아티스트 선택</string>
   <string name="action_customize">사용자 지정…</string>
@@ -27,7 +27,7 @@
   <string name="action_go_to_podcast">팟캐스트로 이동</string>
   <string name="action_go_to_radio">라디오로 이동</string>
   <string name="action_go_to_track">곡으로 이동</string>
-  <string name="action_insert_next">다음 곡으로 추가</string>
+  <string name="action_insert_next">현재 곡 다음에 삽입</string>
   <string name="action_insert_next_and_play">다음에 추가하고 재생</string>
   <string name="action_lyrics">가사</string>
   <string name="action_mark_played">재생함으로 표시</string>
@@ -50,7 +50,7 @@
   <string name="action_remove_dislike">싫어요 취소</string>
   <string name="action_remove_from_library">라이브러리에서 제거</string>
   <string name="action_remove_from_playlist">재생목록에서 제거</string>
-  <string name="action_replace_next">다음에 추가하고 나머지 대기열 교체</string>
+  <string name="action_replace_next">대기열 교체</string>
   <string name="action_similar_artists">비슷한 아티스트</string>
   <string name="action_start_endless_mix">연속 믹스 시작</string>
   <string name="action_start_radio">라디오 시작</string>
