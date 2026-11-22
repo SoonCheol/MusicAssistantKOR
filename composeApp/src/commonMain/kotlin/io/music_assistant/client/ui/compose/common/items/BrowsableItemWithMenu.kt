@@ -1,8 +1,10 @@
 package io.music_assistant.client.ui.compose.common.items
 
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -316,6 +318,34 @@ fun PodcastWithMenu(
  * A playable browse folder offers the playback block on long press. Other folders (provider
  * roots, the ".." entry) are navigation only: no menu, and not dimmed.
  */
+/** Reuse the exact browse-folder playback menu on the current folder's title. */
+@Composable
+fun FolderTitleWithMenu(
+    item: RecommendationFolder,
+    onPlayOption: PlayHandler<RecommendationFolder>,
+    libraryActions: LibraryActions,
+) {
+    if (!item.isPlayable || item.isParentLink || item.mediaUri.isNullOrBlank()) {
+        Text(item.displayName)
+        return
+    }
+    BrowsableItemWithMenu(
+        item = item,
+        onNavigateClick = {},
+        onPlayOption = onPlayOption,
+        libraryActions = libraryActions,
+    ) { modifier, _, onLongClick ->
+        Text(
+            text = item.displayName,
+            modifier = modifier.combinedClickable(
+                onClick = {},
+                onLongClick = { onLongClick(item) },
+            ),
+            maxLines = 1,
+        )
+    }
+}
+
 @Composable
 fun FolderWithMenu(
     item: RecommendationFolder,
